@@ -1,0 +1,11 @@
+services:
+  ygrene_helper.subscriber:
+    class: Drupal\ygrene_helper\EventSubscriber\EventSubscriber
+    tags:
+      - { name: event_subscriber }
+
+  cache_context.custom_context_mobile_detected:
+    class: Drupal\ygrene_helper\Cache\Context\MobileDetectCacheContext
+    arguments: []
+    tags:
+      - { name: cache.context }
