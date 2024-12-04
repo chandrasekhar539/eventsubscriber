@@ -1,0 +1,2298 @@
+<?php
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\node\Entity\Node;
+use Drupal\profile\Entity\Profile;
+use Drupal\user\Entity\User;
+use Drupal\user\UserInterface;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\views\Views;
+use Drupal\Component\Utility\Html;
+
+
+/**
+ * Implements hook_views_data_alter().
+ */
+function spice_utility_views_data_alter(array &$data) {
+  $data['node_field_data']['custom_php'] = [
+    'title' => 'Ideas Total.',
+    'help' => 'Total number of innovations per supplier.',
+    'field' => [
+      'id' => 'custom_php_plugin_id',
+    ],
+  ];
+   $data['node_field_data']['custom_php_one'] = [
+    'title' => 'New Innovations.',
+    'help' => 'Total number of New Innovations per supplier.',
+    'field' => [
+'id' => 'custom_php_one_plugin_id',
+    ],
+  ];
+   $data['node_field_data']['custom_php_two'] = [
+    'title' => 'Assessed Innovations.',
+    'help' => 'Total number of Assessed  Innovations per supplier.',
+    'field' => [
+'id' => 'custom_php_two_plugin_id',
+    ],
+  ];
+   $data['node_field_data']['custom_php_three'] = [
+    'title' => 'Not Matching  Innovations.',
+    'help' => 'Total number of Not Matching  Innovations per supplier..',
+    'field' => [
+'id' => 'custom_php_three_plugin_id',
+    ],
+  ];
+   $data['node_field_data']['custom_php_four'] = [
+    'title' => 'Parked Innovations.',
+    'help' => 'Total number of Parked  Innovations per supplier.',
+    'field' => [
+'id' => 'custom_php_four_plugin_id',
+    ],
+  ];
+   $data['node_field_data']['custom_php_five'] = [
+    'title' => 'Adopted Innovations.',
+    'help' => 'Total number of Adopted  Innovations per supplier.',
+    'field' => [
+'id' => 'custom_php_five_plugin_id',
+    ],
+  ];
+  $data['node_field_data']['custom_php_six'] = [
+    'title' => 'Innovation follow up count.',
+    'help' => 'Total number of Innovation follow up count per Innovation.',
+    'field' => [
+'id' => 'custom_php_six_plugin_id',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+//do not use this use theme preporcess function which already mentioned
+//function spice_utility_preprocess_swiftmailer(&$variables) {
+function template_preprocess_symfony_mailer_lite_email__spice_utility__digest_mail_selected(&$variables) {
+/*$view = \Drupal\views\Views::getView('latest_innovations');
+      //print $_SESSION['langcode'];die;
+  $view->setDisplay('page_3');
+      // contextual relationship filter 
+  $render_view = $view->render();
+  foreach ($render_view['#view']->result as $key => $value) {
+   $title = $value->_entity->get('title')->getValue()[0]['value'];
+  }
+  //$output =   \Drupal::service('renderer')->render($render_view);*/
+  $host = \Drupal::request()->getSchemeAndHttpHost();
+  $node_title =  \Drupal::database()->query("SELECT title,nid FROM {node_field_data} node  WHERE node.type='innovation' and node.status=1 ORDER BY node.created DESC limit 8")->fetchAll();
+  foreach($node_title as $key=>$value) {
+     $title_array[] = $value->title;
+     $nid_array[] = $value->nid;
+  }
+  foreach($nid_array as $key=>$value) {
+    //print_r($value);
+   $fid = \Drupal::database()->query("SELECT field_image_target_id FROM {node__field_image} node  WHERE entity_id = $value")->fetchField();
+    if(!empty($fid)) {
+      $uri = \Drupal::database()->query("SELECT uri FROM {file_managed} file WHERE fid = $fid")->fetchField();
+      if(!empty($uri))
+      $imagename[] = $host."/sites/default/files/".explode("public://",$uri)[1];
+    }
+    else
+      $imagename[] = $host."/sites/default/files/default_images/SPICE_bran_small_2.jpg";
+    $body_string =  \Drupal::database()->query("SELECT body_value FROM {node__body} node  WHERE entity_id = $value")->fetchField();
+    if(strlen($body_string) > 300)
+    $body[] =  substr($body_string, 0, 300)."..."."<a href=".$host."/node/".$value.">Read more</a>";
+    else
+      $body[] = $body_string;
+    $challenge_node =  \Drupal::database()->query("SELECT field_search_space_target_id FROM {node__field_search_space} node  WHERE entity_id = $value")->fetchField();
+    $innov_challenge[] =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE nid = $challenge_node")->fetchField();
+     $uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE nid = $value")->fetchField();
+     $author[] =  \Drupal::database()->query("SELECT name FROM {users_field_data} node  WHERE uid = $uid")->fetchField();
+     $nodes[] = $value;
+     $challenge_nodes[] = $challenge_node;
+    //print $body;
+  }
+  $eightdays = time() - (8*24*60*60);
+  $fourteendays = time() - (14*24*60*60);
+  $companies = \Drupal::database()->query("SELECT node.nid AS nid, node.title AS node_title,node.created AS node_created FROM {node_field_data} node LEFT JOIN {node_field_revision} node_revision ON node.vid = node_revision.vid WHERE (( (node.status = '1') AND (node.type IN  ('supplier_record')) )AND( (node_revision.changed >= $eightdays) OR (node.created >= $fourteendays) )) ORDER BY node_created DESC LIMIT 16 OFFSET 0")->fetchAll();
+foreach($companies as $key=>$value) {
+     $companies_nid[]=$value->nid;
+     $companies_title[]=$value->node_title;
+  }  
+ //$title_array = 
+//print "test";  print_r($imagename);die;
+   $variables['company_title'] = $companies_title;
+  $variables['company_nid'] = $companies_nid;
+   //$variables['title1'] = $title_array[0].$variables['message']['to'];
+  $variables['title1'] = "chandra".$variables['message']['subject'].$variables['message'];
+  $variables['body1'] = $body[0];
+  $variables['innov_challenge1'] = $innov_challenge[0];
+  $variables['author1'] = $author[0];
+  $variables['node1'] = $nodes[0];
+ $variables['challenge_node1'] = $challenge_nodes[0];
+$variables['image1'] = $imagename[0];
+
+ $variables['title2'] = $title_array[1];
+$variables['body2'] = $body[1];
+$variables['innov_challenge2'] = $innov_challenge[1];
+  $variables['author2'] = $author[1];
+$variables['node2'] = $nodes[1];
+$variables['challenge_node2'] = $challenge_nodes[1];
+$variables['image2'] = $imagename[1];
+
+$variables['title3'] = $title_array[2];
+$variables['body3'] = $body[2];
+$variables['innov_challenge3'] = $innov_challenge[2];
+  $variables['author3'] = $author[2];
+$variables['node3'] = $nodes[2];
+$variables['challenge_node3'] = $challenge_nodes[2];
+$variables['image3'] = $imagename[2];
+
+$variables['title4'] = $title_array[3];
+$variables['body4'] = $body[3];
+$variables['innov_challenge4'] = $innov_challenge[3];
+  $variables['author4'] = $author[3];
+$variables['node4'] = $nodes[3];
+$variables['challenge_node4'] = $challenge_nodes[3];
+$variables['image4'] = $imagename[3];
+
+$variables['title5'] = $title_array[4];
+$variables['body5'] = $body[4];
+$variables['innov_challenge5'] = $innov_challenge[4];
+  $variables['author5'] = $author[4];
+$variables['node5'] = $nodes[4];
+$variables['challenge_node5'] = $challenge_nodes[4];
+$variables['image5'] = $imagename[4];
+
+$variables['title6'] = $title_array[5];
+$variables['body6'] = $body[5];
+$variables['innov_challenge6'] = $innov_challenge[5];
+  $variables['author6'] = $author[5];
+$variables['node6'] = $nodes[5];
+$variables['challenge_node6'] = $challenge_nodes[5];
+$variables['image6'] = $imagename[5];
+
+$variables['title7'] = $title_array[6];
+$variables['body7'] = $body[6];
+$variables['innov_challenge7'] = $innov_challenge[6];
+  $variables['author7'] = $author[6];
+$variables['node7'] = $nodes[6];
+$variables['challenge_node7'] = $challenge_nodes[6];
+$variables['image7'] = $imagename[6];
+
+$variables['title8'] = $title_array[7];
+$variables['body8'] = $body[7];
+$variables['innov_challenge8'] = $innov_challenge[7];
+$variables['author8'] = $author[7];
+$variables['node8'] = $nodes[7];
+$variables['challenge_node8'] = $challenge_nodes[7];
+$variables['image8'] = $imagename[7];
+//print_r($variables);die;
+  //$variables['output_view'] = $title_array[0];
+$variables['challenges'] =  \Drupal::database()->query("SELECT count(nid) FROM {node_field_data} node  WHERE node.type='innovation_search_space' AND node.status=1")->fetchField();
+
+    $variables['innov_published'] =  \Drupal::database()->query("SELECT count(nid) FROM {node_field_data} node  WHERE node.type='innovation' AND node.status=1")->fetchField();
+
+   $variables['assessments'] =  \Drupal::database()->query("SELECT count(nid) FROM {node_field_data} node  WHERE node.type='innovation_follow_up' AND node.status=1")->fetchField();
+
+     $variables['philips_users'] =  \Drupal::database()->query("SELECT count(entity_id) FROM {user__roles} roles  WHERE roles.roles_target_id='philips_user'")->fetchField();
+
+    $variables['external_users'] =  \Drupal::database()->query("SELECT COUNT(DISTINCT entity_id) FROM {user__roles} roles  WHERE roles.roles_target_id='philips_preferred_supplier' OR roles.roles_target_id='philips_supplier' OR roles.roles_target_id='inventor' OR roles.roles_target_id='potential_supplier'")->fetchField();
+
+    $variables['innov_total'] =  \Drupal::database()->query("SELECT count(nid) FROM {node_field_data} node  WHERE node.type='innovation'")->fetchField();
+}
+
+
+/**
+* Implements hook_cron().
+*/
+function spice_utility_cron() {
+//$digest_config = \Drupal::config('spice_utility.settings');
+//$mails = $digest_config->get('digest_mail');
+ // $tomails = explode(",",$mails);
+  //if(!empty($tomails)) {
+  //$params['subject'] = 'new way';
+  //$params['message'] = 'My name is ';
+   //$mailManager = \Drupal::service('plugin.manager.mail');
+   //foreach($tomails as $key=>$value) {
+    //$mailManager->mail('spice_utility', 'diget_mail_selected', $value, 'en', $params, 'tt@gmail.com', true);
+//}
+//} 
+} 
+
+/**
+ * Implements hook_theme().
+ */
+function spice_utility_theme() {
+  return [
+    'hello_block' => [
+      'variables' => [
+        'challenges' => NULL,
+        'innov_publised' => NULL,
+        'assessments' => NULL,
+        'philips_users' => NULL,
+        'external_users' => NULL,
+        'innov_total' => NULL,
+      ],
+    ],
+   'decision_statistics' => [
+      'variables' => [
+        'output' => NULL,
+      ],
+    ],
+  ];
+}
+
+function spice_utility_views_query_alter(Drupal\views\ViewExecutable $view, Drupal\views\Plugin\views\query\QueryPluginBase $query) {
+	//print $view->id();die;
+    if ($view->id() == 'innovation_search_areas_grid_public_front_page') {
+    	 //$query->addWhere('', 'node__field_public_challenge.field_public_challenge_value.value', '1', '=');
+    	$roles = \Drupal::currentUser()->getRoles();
+					if(in_array('inventor', $roles) || in_array('potential_supplier', $roles)) {
+    	//if ($view->current_display == 'entity_reference_1') {
+    	$query->addField('node__field_public_challenge', 'field_public_challenge_value');
+                $query->addWhere('conditions', 'node__field_public_challenge.field_public_challenge_value', 1, '=');
+             // }
+            }
+        /* foreach ($query->where as &$condition_group) {
+      foreach ($condition_group['conditions'] as &$condition) {
+      //	print $condition['field'];die;
+      	if($condition['field'] == "node__field_public_challenge.field_public_challenge_value") {
+      			//print "test";die;
+          $condition = [
+            'field' => 'node__field_public_challenge.field_public_challenge_value',
+            'value' => 1,
+            'operator' => '=',
+          ];
+        
+      			//unset($condition);
+      	}
+      }
+    }*/
+    }
+}
+
+
+
+/**
+ * Implements hook_node_access().
+ *
+ * Enforces our access rules for custom workflow target content to force updates
+ * only if the user is targeted in the user select field
+ */
+ function spice_utility_node_access($node, $op, $account) {
+  
+   if ($op == 'view') {
+   	if (isset($node->field_public_challenge)) {
+   		if($node->get('field_public_challenge')->value == 1 ){
+   			$roles = $account->getRoles();
+   			if(in_array("inventor",$roles) || in_array("potential_supplier",$roles) || in_array("scouting_network",$roles)) {
+   				return \Drupal\Core\Access\AccessResult::allowed();
+   			}
+   			if(in_array("challenge_owner",$roles)) {
+   				return \Drupal\Core\Access\AccessResult::forbidden();
+   			}
+   		}
+   	}
+   	 //print $node->field_public_challenge;die;
+   }
+ }
+
+/**
+ * Implements hook_menu_alter().
+ */
+function spice_utility_link_alter(&$variables) {
+
+  /**
+   * The URL of the link.
+   *
+   * @var Url
+   */
+  $url = $variables['url'];
+
+  if ($url->isRouted() && $url->getRouteName() == 'user.page') {
+    $route_name = $url->getRouteName();
+    if ($route_name != 'user.page') {
+      return;
+    }
+    elseif ($variables['text'] == t('My account')) {
+    //  $account = User::load(\Drupal::currentUser()->id());
+    	$account = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id());
+   $user = $account->get('name')->value;
+     // $account->getUsername();
+     // \Drupal::currentUser()->id()
+      $variables['text'] = $user;
+      //$variables['text'] = t('Welcome @name', ['@name' =>'Full Name']); 
+    }
+  }
+}
+//print $user->id();
+/*$user = \Drupal\user\Entity\User::load(11701);
+$list = \Drupal::entityTypeManager()
+  ->getStorage('profile')
+  ->loadByUser($user,'main');
+ print_r($list->get('field_company'));die;*/
+  //print_r($list);die;
+ //$list->postSave();
+ //print_r(fetch_supplier_nid_by_domain("test@gmail.com"));die;
+ //$node = Node::load(611);
+ //$entity->field_company_users->target_id =  1;
+//$node->save();
+ 
+ function fetch_supplier_nid_by_domain($user_mail) {
+ 	$domail_value = strtolower(strstr($user_mail, '@'));
+ 	  $query = \Drupal::database()->select('node', 'n');
+    $query->leftJoin('node__field_domain', 'nfd', 'n.nid = nfd.entity_id');
+    $query->fields('n', ['nid']);
+   $query->condition('n.type', 'supplier_record');
+    $query->condition('nfd.field_domain_value',  "%" . $domail_value . '%', 'LIKE');
+    $supplierprofilenid = $query->execute()->fetchField();
+
+	/*$querytext = "SELECT MIN(node.nid) FROM {node} node LEFT JOIN {field_data_field_domain} ";
+	$querytext .= "field_data_field_domain ON node.nid = ";
+	$querytext .= "field_data_field_domain.entity_id AND (field_data_field_domain.entity_type = 'node' )";
+	$querytext .= " WHERE (( (node.type IN  ('supplier_record')) AND (field_data_field_domain.field_domain_value LIKE '%";
+	$querytext .= strtolower(strstr($user_fetched->mail, '@')); 
+	$querytext .= "%' ) ))";
+
+	$supplierprofilenid = db_query($querytext)->fetchField();*/
+	//$Object = array_reduce($supplierprofilenid,"user_defined_reduce");
+	return $supplierprofilenid;
+
+}
+
+
+function spice_utility_entity_presave(Drupal\Core\Entity\EntityInterface $entity) {
+//print $entity->bundle();die;
+  switch ($entity->bundle()) {
+  	case 'main':
+  	//$user = user_load_by_mail('philips_user44@philips.com');
+  	//print_r($user->id());die;
+  	if($entity->isNew()) {
+  	$user_mail = $_SESSION['new_user_mail'];
+  	$company_registered = $_SESSION['company'];
+  	$philips_user = false;
+		if(strpos($user_mail,'@philips.com') >0 || strpos($user_mail,'@Philips.com') >0 || strpos($user_mail,'@PHILIPS.COM') >0 || strpos($user_mail,'ollabior.comx') >0) {
+			$philips_user = true;
+		}
+		//update profile data for philips domain user mail
+		if($philips_user) {
+  	$entity->set('field_company','Royal Philips');
+  	$entity->set('field_company_profile',425);
+    }
+    //create new company for supplier and new company profile
+    $profile_type = $_SESSION['profile_type'];
+    if($profile_type == "Current_Supplier" || $profile_type == "New_Company") {
+
+    	//$user = user_load_by_mail($user_mail);
+    	//$uid = $user->id();
+    	//$uid =  \Drupal::database()->query("SELECT uid FROM {users_field_data} user  WHERE user.mail=$user_mail")->fetchField();
+    	$user_mail_domain = strtolower(strstr($user_mail, '@'));
+    	$supplier_nid = (int)fetch_supplier_nid_by_domain($user_mail_domain);
+    	if(!empty($supplier_nid)) {
+    	$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$supplier_nid")->fetchField();
+      $entity->set('field_company',$node_title);
+      $entity->set('field_company_profile',$supplier_nid);
+      $_SESSION['supplier_created'] = false;
+      }
+      else {
+      	$my_article = Node::create(['type' => 'supplier_record']);
+				$my_article->set('title', $company_registered);
+				$my_article->set('field_domain', $user_mail_domain);
+				$my_article->set('field_company_primary_email', $user_mail);
+				$my_article->enforceIsNew();
+				$my_article->save();
+				$_SESSION['supplier_created'] = true;
+      }
+      //$node = Node::load($supplier_nid);
+  		//$node->set('field_company_users', ['target_id' => 11701]);
+ 			//$node->field_company_users[] =  $uid;
+			//$node->save();
+    }
+  }
+    //$entity->set('field_company','Royal Philips');
+  	//$entity->set('field_company_profile',425);
+  	break;
+  	case 'supplier_record':
+  	$current_user_mail = \Drupal::currentUser()->getEmail();//supplier_or_external_company_generic_gmail_account rule
+  	 $contact_mail = $entity->field_company_contact->value;
+  	 if(empty($contact_mail))
+  	 	$entity->set('field_company_contact',$current_user_mail);
+  	 break;
+  	 case 'innovation':
+
+  	 if(!$entity->isNew()) {
+  	 	$innov_node_status_query = $entity->field_status->value;
+  	 	if($innov_node_status_query == 1)
+					$innov_node_status = "1-New";
+				elseif ($innov_node_status_query == 2) 
+					$innov_node_status = "2-Voting and Allocation";
+				elseif ($innov_node_status_query == 3) 
+					$innov_node_status = "3-Assessment";
+				elseif ($innov_node_status_query == 4) 
+					$innov_node_status = "4-Not Matching";
+				elseif ($innov_node_status_query == 5) 
+					$innov_node_status = "5-Parked";
+				elseif ($innov_node_status_query == 6) 
+					$innov_node_status = "6-Hand Over";
+				elseif ($innov_node_status_query == 7) 
+					$innov_node_status = "7-Adoption";
+				//print $innov_node_status_query;print $innov_node_status;die;
+				if($innov_node_status == "3-Assessment" || $innov_node_status == "4-Not Matching" || $innov_node_status == "5-Parked" || $innov_node_status == "6-Hand Over" || $innov_node_status == "7-Adoption") {
+					$entity->set('field_date_decision',date('Y-m-d', time()));
+				}
+        $challenge_nid_original = $entity->original->field_search_space->target_id;
+        $challenge_nid = $entity->field_search_space->target_id;
+        if(!empty($challenge_nid) && ($challenge_nid_original != $challenge_nid))
+          $contact_uid =  \Drupal::database()->query("SELECT field_contact_person_target_id FROM {node__field_contact_person} node  WHERE node.entity_id=$challenge_nid")->fetchField();
+        $entity->set('field_philips_owner',$contact_uid);
+        
+  	 }
+  	 //$challenge_nid = $entity->field_search_space->target_id;
+     if($entity->isNew()) {
+       $challenge_nid = $entity->field_search_space->target_id;
+       //print $challenge_nid;
+        if(!empty($challenge_nid))
+          $contact_uid =  \Drupal::database()->query("SELECT field_contact_person_target_id FROM {node__field_contact_person} node  WHERE node.entity_id=$challenge_nid")->fetchField();
+        //print $contact_uid;die;
+        $entity->set('field_philips_owner',$contact_uid);
+      //company profile
+     $uid = \Drupal::currentUser()->id();
+    $current_user_mail = \Drupal::currentUser()->getEmail();
+    $profile_id =  \Drupal::database()->query("SELECT profile_id FROM {profile} profle  WHERE profle.uid=$uid")->fetchField();
+//print $profile_id;
+    if(!empty($profile_id)) {
+      $company_profile =  \Drupal::database()->query("SELECT field_company_profile_target_id FROM {profile__field_company_profile} pfcc  WHERE pfcc.entity_id=$profile_id")->fetchField();
+      $entity->set('field_company_profile',$company_profile);
+    }
+     }
+  	   //print "test1";die;
+  	   /*if($entity->isNew()) {
+         if(!empty($challenge_nid)) {
+					$contact_uid =  \Drupal::database()->query("SELECT field_contact_person_target_id FROM {node__field_contact_person} node  WHERE node.entity_id=$challenge_nid")->fetchField();
+  	 				$challenge_author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$challenge_nid")->fetchField();
+  							
+					}
+					$roles_condition = false;
+					$roles = \Drupal::currentUser()->getRoles();
+					if(in_array('philips_supplier', $roles) || in_array('philips_preferred_supplier', $roles) || in_array('philips_user', $roles) || in_array('challenge_owner', $roles) || in_array('community_support', $roles) || in_array('innovation_champion', $roles) || in_array('community_mgr', $roles) || in_array('administrator', $roles)) {
+  					// Do something if user has role editor
+  					$roles_condition = true;
+					}
+					$innovation_owner = $entity->field_philips_owner->target_id;
+					if(!empty($contact_uid) && $roles_condition && !empty($innovation_owner)) {
+
+					}
+					else {
+
+					}
+       	}
+     break;*/
+  	}
+}
+
+function spice_utility_mail_alter(&$message) {
+$mail_id = $message['id'];
+  $id = $message['key'];
+	$message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+        if($id == 'diget_mail_selected') {
+//$activeContestId = 100;
+//$view = Views::getView('latest_innovations');
+//$view->setDisplay('page_3');
+// contextual relationship filter 
+//$view->setArguments([$activeContestId]);
+//$view->execute();
+//$rendered = $view->render();
+//$output = \Drupal::service('renderer')->render($rendered);
+//$output = \Drupal::service('renderer')->render(views_embed_view('latest_innovations', 'block_1'));
+    $message['subject'] = "What's new on Innovate with Philips portal chandrasekhar? [Digest] test" . $message['to'];
+    $message['body'][] = '';
+}
+if($mail_id == 'forward_send_entity') {
+$path = \Drupal::request()->getpathInfo();
+$arg  = explode('/',$path);
+$nid = $arg[3];
+$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid = $nid")->fetchField();
+$uid = \Drupal::currentUser()->id();
+$account = \Drupal\user\Entity\User::load($uid);
+$username = $account->get("name")->value;
+$host = \Drupal::request()->getSchemeAndHttpHost();
+$message['body'][] = "$username has  interest in spreading the word about <em> $node_title,
+
+<a href=".$host.'/node/'.$nid.'>'.$node_title.'</a>';
+//print_r($node_title);die;
+}
+if($message['subject'] == 'diget_mail_selected') {
+ $message['id'] = 'diget_mail_selected';
+ $message['key'] = 'diget_mail_selected';
+ $message['module'] = 'spice_utility';
+$message['digestuser'] = $message['to'];
+ $message['subject'] = "What's new on Innovate with Philips portal ? [Digest]";
+$message['body'][] = '';
+//Digest Innovation Challeng public
+$activeContestId = 100; //
+$digestuser = $message['to'];
+if(strpos($digestuser,'@philips.com') >0 || strpos($digestuser,'@Philips.com') >0 || strpos($digestuser,'@PHILIPS.COM') >0) {
+$philipsrole = true;
+}
+else {
+$digestuid = \Drupal::database()->query("SELECT uid FROM {users_field_data} node  WHERE mail = '$digestuser'")->fetchField();
+    $view = Views::getView('latest_connections');
+    $view->setDisplay('block_2');
+    // contextual relationship filter
+   // $view->setArguments([$digestuid]);
+    $view->execute();
+    $rows1 = $view->total_rows;
+     $view = Views::getView('latest_connections');
+    $view->setDisplay('block_6');
+    // contextual relationship filter
+   $view->setArguments([$digestuid]);
+    $view->execute();
+    $rows2 = $view->total_rows;
+    if($rows1 == 0 && $rows2 == 0) {
+      $message['send'] = FALSE;
+      return;
+    }
+}
+
+} 	
+
+	if($message['subject'] == 'inform_new_sam_upon_email_change_in_supplier_account') {
+		if($_SESSION['is_inform_supplier']) {
+		$uid = $message['body'][0];
+		$company_contact = $_SESSION['profile_changed_contact_mail'];
+		$company = $_SESSION['company'];
+		//print $uid;die;
+		$name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		//print $email;print $name;
+		$config = \Drupal::config('system.site');
+  		$sitename = $config->get('name');
+  		$message['to'] = $company_contact.","."yvan.davoust@philips.com";
+		$message['subject'] = "Your Supplier needs your confirmation to join Philips SPICE program";
+		$message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+		$message['body'] = [];
+		 $message['body'][] = "Dear Philips Supplier Account Manager"."<br>".
+		 $name." "."has just created an account on".$sitename."<br>".
+		 "Through this"." ".$sitename." "."website, suppliers are invited to collaborate around our Innovation Search Areas and share their ideas with Philips as part of our SPICE program."."<br>".
+		 $name." "."has indicated that you were his/her main Philips contact. As such, you are asked to grant or deny access of this company to the restricted Innovation Search Areas posted. <b><i>We should only grant access to our preferred and strategic suppliers.</i></b>"."<br>".
+		 "<u>You will need to accept to be the 'Philips contact' for this supplier by clicking on the link".$name."'s Philips Supplier Account Manager on the page".$host."/relationship/received/"."</u><br>".
+		   "You should only approve requests if following 4 conditions are met:<br>".
+		   "1."." ".$company." "."is a supplier you are responsible for (you belong to Philips Procurement and are the SAM for this supplier)<br>".
+		   "2. You agree to give"." ".$company." "."access to our SPICE Innovation challenges, and agree to have"." ".$company." "."answer those by posting innovation on the SPICE website.<br>".
+		   "3."." ".$company." "."is not a company on the phase-out list for Philips.<br>".
+		   "4."." ".$name." "."has registered with a legitimate corporate email address from his company. (".$mail.")<br><br>".
+		   "<b>Note:</b> If you do not have access to"." ".$sitename.", you will need first to register to this website at"." ".$host." "."with your @philips.com email address.<br>".
+		   "The supplier will not be able to see our innovation challenges nor post innovations until you have completed this step.<br>".
+		   "Please forward this mail to yvan.davoust@philips.com should you have any hesitation whether or not to approve this request, or in case you need support with this process or see an 'Access Denied' message on the website.<br>".
+		   "Looking forward to seeing you online at"." ".$host."<br>".
+		   "On behalf of the Philips SPICE team<br>".
+		   "Yvan Davoust";
+		 "Philips Contact:".$company_contact;
+		}
+		else {
+			$message['send'] = FALSE;
+				return;
+		}
+	}
+
+	if($message['subject'] == 'assessment_comment') {
+		$cid = (int)$message['body'][0];
+		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+		$comment_payload = $comment->toArray();
+		$subscribe = (int)$comment_payload['field_subscribe'][0]['value'];
+		$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+		$cid_uid = $comment_payload['uid'][0]['target_id'];
+		$connection = \Drupal::service('database');
+		$sid  = \Drupal::database()->query('SELECT sid FROM {subscriptions} u WHERE module =:module and field = :field and value = :nid and recipient_uid = :recipient_uid ', ['module' => 'node','field' => 'nid','nid' => $comment_nid,'recipient_uid' => $cid_uid])->fetchField();
+		$is_subscribe = false;
+	  if($sid)
+					$is_subscribe = true;
+		if($subscribe) {
+			
+			if(!$is_subscribe) {
+  	 				$result = $connection->insert('subscriptions')
+  						->fields([
+   						 'module' => 'node',
+    						'field' => 'nid',
+    						'value' => $comment_nid,
+    						'recipient_uid' => (int)$cid_uid,
+  						])
+  					->execute();
+  				}
+		}
+		$uid_result  = \Drupal::database()->query('SELECT recipient_uid FROM {subscriptions} u WHERE module =:module and field = :field and value = :nid ', ['module' => 'node','field' => 'nid','nid' => $comment_nid])->fetchAll();
+			foreach($uid_result as $key=>$value) {
+				$uids[] = $value->recipient_uid;
+				$to_mails[] =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$value->recipient_uid")->fetchField();
+			}
+		
+	         if(!empty($to_mails))	
+		$to_mails = array_unique($to_mails);
+		foreach($to_mails as $key=>$value) {
+			$k .= $value.",";
+		}
+		//print_r($k);die;
+		$message['to'] = $k;
+		//print $message['to'];die;
+		$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+		$cid_user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$cid_uid")->fetchField();
+				
+				$message['subject'] = "New comment has been posted to". " " .$node_title;
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+		$comment_body = $comment_payload['comment_body'][0]['value'];
+				$message['body'][] = "Dear Innovator,
+
+<a href=".$host.'/node/'.$comment_nid.'>'.$node_title.'</a> got new comment from <a href='.$host.'/user/'.$uid.'>'.$cid_user_name.'</a>.
+
+
+
+<strong>Comment:</strong>'."<br>".
+$comment_body;
+		
+	}
+
+	if($message['subject'] == 'scoutcast_comment') {
+		$cid = (int)$message['body'][0];
+		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+		$comment_payload = $comment->toArray();
+		$subscribe = (int)$comment_payload['field_subscribe'][0]['value'];
+		$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+		$cid_uid = $comment_payload['uid'][0]['target_id'];
+		$connection = \Drupal::service('database');
+		$sid  = \Drupal::database()->query('SELECT sid FROM {subscriptions} u WHERE module =:module and field = :field and value = :nid and recipient_uid = :recipient_uid ', ['module' => 'node','field' => 'nid','nid' => $comment_nid,'recipient_uid' => $cid_uid])->fetchField();
+		$is_subscribe = false;
+	  if($sid)
+					$is_subscribe = true;
+					
+				
+		if($subscribe) {
+			
+			if(!$is_subscribe) {
+  	 				$result = $connection->insert('subscriptions')
+  						->fields([
+   						 'module' => 'node',
+    						'field' => 'nid',
+    						'value' => $comment_nid,
+    						'recipient_uid' => (int)$cid_uid,
+  						])
+  					->execute();
+  				}
+		}
+		$uid_result  = \Drupal::database()->query('SELECT recipient_uid FROM {subscriptions} u WHERE module =:module and field = :field and value = :nid ', ['module' => 'node','field' => 'nid','nid' => $comment_nid])->fetchAll();
+			foreach($uid_result as $key=>$value) {
+				$uids[] = $value->recipient_uid;
+				$to_mails[] =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$value->recipient_uid")->fetchField();
+			}
+		
+	        if(!empty($to_mails))	
+		$to_mails = array_unique($to_mails);
+		foreach($to_mails as $key=>$value) {
+			$k .= $value.",";
+		}
+		//print_r($k);die;
+		$message['to'] = $k;
+		//print $message['to'];die;
+		$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+		$cid_user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$cid_uid")->fetchField();
+				
+				$message['subject'] = "New comment has been posted to". " " .$node_title;
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+		$comment_body = $comment_payload['comment_body'][0]['value'];
+				$message['body'][] = "Dear Philips Innovator,
+
+The SPICE ScoutCast <a href=".$host.'/node/'.$comment_nid.'>'.$node_title.'</a> got new comment from <a href='.$host.'/user/'.$uid.'>'.$cid_user_name.'</a>.
+
+
+
+<strong>Comment:</strong>'."<br>".
+$comment_body."<br>".
+
+"Please click here to the ScoutCast <a href=".$host.'/node/'.$comment_nid.'>'.$node_title.'</a>';
+		
+	}
+	
+	if($message['subject'] == 'innovation_new_field_search_space_current_user') {
+		$roles_condition = false;
+		$current_user_mail = \Drupal::currentUser()->getEmail();
+					$roles = \Drupal::currentUser()->getRoles();
+					if(in_array('inventor', $roles) || in_array('philips_supplier', $roles) || in_array('philips_preferred_supplier', $roles) || in_array('philips_user', $roles) || in_array('challenge_owner', $roles) || in_array('community_support', $roles) || in_array('innovation_champion', $roles) || in_array('community_mgr', $roles) || in_array('administrator', $roles)) {
+  					// Do something if user has role editor
+  					$roles_condition = true;
+					}
+		$innov_nid = (int)$message['body'][0];
+		$challenge_nid =  \Drupal::database()->query("SELECT field_search_space_target_id FROM {node__field_search_space} node  WHERE node.entity_id=$innov_nid")->fetchField();
+		//print $challenge_nid;die;
+		if(!empty($challenge_nid) && $roles_condition) {
+			$contact_uid =  \Drupal::database()->query("SELECT field_contact_person_target_id FROM {node__field_contact_person} node  WHERE node.entity_id=$challenge_nid")->fetchField();
+			$author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$challenge_nid")->fetchField();
+			if(!empty($contact_uid)) {
+				
+				
+				$innov_nid = (int)$message['body'][0];
+				$innov_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$innov_nid")->fetchField();
+				$innov_author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$innov_nid")->fetchField();
+				$innov_author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$innov_author_uid")->fetchField();
+				$innov_author_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$innov_author_uid")->fetchField();
+				
+				$message['to'] = $innov_author_mail;
+				$message['subject'] = "Thanks for Innovating with Philips!";
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+				$message['body'][] = "Dear ".$innov_author_name.","."<br><br>".
+				"Thanks for Innovating with Philips!"."<br>".
+				"Your submission will now be reviewed for publication within the Philips community."."<br>".
+				"You can follow up on the status of your submission and answer any question at"." "."<a href=".$host.'/node/'.$innov_nid.'>'.$innov_node_title.'</a>  <br>'.
+				"We will come back to you as soon as we have feedback or question to you. Although it depends on the type of innovation, we typically try to evaluate all submissions within 5 weeks."."<br><br>".
+				"Best Regards,"."<br>".
+				"The Philips Supplier Innovation Team";
+			}
+			else {
+				$message['send'] = FALSE;
+				return;
+			}
+		}
+		else {
+			$message['send'] = FALSE;
+			return;
+		}
+	}
+
+	if($message['subject'] == 'innovation_new_field_search_space_admin_comm_mgr') {
+               $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator','community_mgr')")->fetchAll();
+foreach($uids as $k=>$u) {
+$mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
+}
+
+		$roles_condition = false;
+					$roles = \Drupal::currentUser()->getRoles();
+					if(in_array('inventor', $roles) || in_array('philips_supplier', $roles) || in_array('philips_preferred_supplier', $roles) || in_array('philips_user', $roles) || in_array('challenge_owner', $roles) || in_array('community_support', $roles) || in_array('innovation_champion', $roles) || in_array('community_mgr', $roles) || in_array('administrator', $roles)) {
+  					// Do something if user has role editor
+  					$roles_condition = true;
+					}
+		$innov_nid = (int)$message['body'][0];
+		$challenge_nid =  \Drupal::database()->query("SELECT field_search_space_target_id FROM {node__field_search_space} node  WHERE node.entity_id=$innov_nid")->fetchField();
+		//print $challenge_nid;die;
+		if(!empty($challenge_nid) && $roles_condition) {
+			$contact_uid =  \Drupal::database()->query("SELECT field_contact_person_target_id FROM {node__field_contact_person} node  WHERE node.entity_id=$challenge_nid")->fetchField();
+			$author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$challenge_nid")->fetchField();
+			if(!empty($contact_uid)) {
+				$contact_person_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$contact_uid")->fetchField();
+				$author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$author_uid")->fetchField();
+				$innov_nid = (int)$message['body'][0];
+				$innov_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$innov_nid")->fetchField();
+				$challenge_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$challenge_nid")->fetchField();
+				$innov_node_body =  \Drupal::database()->query("SELECT body_value FROM {node__body} node  WHERE node.entity_id=$innov_nid")->fetchField();
+				$innov_author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$innov_nid")->fetchField();
+				$innov_author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$innov_author_uid")->fetchField();
+				$innov_node_status_query =  \Drupal::database()->query("SELECT field_status_value FROM {node__field_status} status  WHERE status.entity_id=$innov_nid")->fetchField();
+				if($innov_node_status_query == 1)
+					$innov_node_status = "1-New";
+				elseif ($innov_node_status_query == 2) 
+					$innov_node_status = "2-Voting and Allocation";
+				elseif ($innov_node_status_query == 3) 
+					$innov_node_status = "3-Assessment";
+				elseif ($innov_node_status_query == 4) 
+					$innov_node_status = "4-Not Matching";
+				elseif ($innov_node_status_query == 5) 
+					$innov_node_status = "5-Parked";
+				elseif ($innov_node_status_query == 6) 
+					$innov_node_status = "6-Hand Over";
+				elseif ($innov_node_status_query == 7) 
+					$innov_node_status = "7-Adoption";
+                                $message['to'] = $mail_id;
+				$message['subject'] = $innov_author_mail. " " ."has posted an answer to your innovation challenge". " " .$challenge_node_title;
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+		$comment_body = $comment_payload['comment_body'][0]['value'];
+				$message['body'][] = "Dear Admin or Community Manager,"."<br>".
+$innov_author_mail. " " ."has posted an answer to your innovation challenge". " "."<b>".$challenge_node_title."<b>."."(innovation status: ".$innov_node_status.")"."<br><br>".
+"Details on:"."<a href=".$host.'/node/'.$innov_nid.'>'.$innov_node_title.'</a>  <br><br>'.
+"Innovation: "."<b>".$innov_node_title."</b><br>".
+"Description: ".$innov_node_body."<br>".
+"Thanks for verifying and if necessary publishing this submission in order to star the assessment and feedback process! "."<br>".
+"Sincerely,"."<br>".
+"The Philips Supplier Innovation team.";
+			}
+			else {
+				$message['send'] = FALSE;
+				return;
+			}
+		}
+		else {
+			$message['send'] = FALSE;
+			return;
+		}
+	}
+
+	if($message['subject'] == 'registered_suppliers_philips_mail') {
+                $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator','community_mgr')")->fetchAll();
+foreach($uids as $k=>$u) {
+$mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
+}
+
+		$body = $message['body'][0];
+	//	print $body;die;
+			$data = explode("+",$body);
+			$uid = (int)explode("-",$data[0])[1];
+			$user_mail = explode("-",$data[1])[1];
+			$profile_type =  $_SESSION['profile_type'];
+			$company_contact = $_SESSION['company_contact'];
+	
+		$philips_user = false;
+		if(strpos($user_mail,'@philips.com') >0 || strpos($user_mail,'@Philips.com') >0 || strpos($user_mail,'@PHILIPS.COM') >0) {
+			$philips_user = true;
+		}
+		$company_user = false;
+		if(strpos($company_contact,'@philips.com') >0 || strpos($company_contact,'@Philips.com') >0 || strpos($company_contact,'@PHILIPS.COM') >0) {
+			$company_user = true;
+		}
+		//print_r($profile_type);
+		//print $philips_user;die;
+		//print_r($company_user);die;
+		if(($profile_type == 'Current_Supplier') && !$philips_user && $company_user) {
+			//$connection = \Drupal::service('database');
+		  
+  			$user = \Drupal\user\Entity\User::load($uid);
+			//	$user->addRole('potential_supplier');
+				//$user->save();
+			$name = $user->get('name')->value;
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		//print $email;print $name;
+		$config = \Drupal::config('system.site');
+  		$sitename = $config->get('name');
+                $message['to'] = $mail_id;
+		$message['subject'] = "A new user". " " .$name ." "."has registered has registered to"." ".$sitename;
+		$message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+		$message['body'] = [];
+		 $message['body'][] = "A new  user"." " .$name. " ". "has registered into"." " . $sitename."<br>".
+		 "The Philips contact indicated has been informed and asked to approve the relationship."."<br>".
+		 "Philips Contact:".$company_contact;
+
+//\Drupal::messenger()->addMessage(t('Thanks for your registration - you are now almost ready to start innovating with Philips !'),'status',true);
+		}
+		else {
+				$message['send'] = FALSE;
+			return;
+		}
+	}
+
+		if($message['subject'] == 'registered_suppliers_philips_mail_selfsend') {
+		$body = $message['body'][0];
+			$data = explode("+",$body);
+			$uid = (int)explode("-",$data[0])[1];
+			$user_mail = explode("-",$data[1])[1];
+                        //print $uid;
+                        //print $user_mail;die;
+			$profile_type =  $_SESSION['profile_type'];
+			$company_contact = $_SESSION['company_contact'];
+			$company = $_SESSION['company'];
+	
+		$philips_user = false;
+		if(strpos($user_mail,'@philips.com') >0 || strpos($user_mail,'@Philips.com') >0 || strpos($user_mail,'@PHILIPS.COM') >0) {
+			$philips_user = true;
+		}
+		$company_user = false;
+		if(strpos($company_contact,'@philips.com') >0 || strpos($company_contact,'@Philips.com') >0 || strpos($company_contact,'@PHILIPS.COM') >0) {
+			$company_user = true;
+		}
+		//print_r($profile_type);
+		//print $philips_user;die;
+		//print_r($company_user);die;
+		if($profile_type == "Current_Supplier" || $profile_type == "New_Company") {
+
+    	//$user = user_load_by_mail($user_mail);
+    	//$uid = $user->id();
+    	//$uid =  \Drupal::database()->query("SELECT uid FROM {users_field_data} user  WHERE user.mail=$user_mail")->fetchField();
+        if(!empty($company_contact)) {
+    	 $contact_user = user_load_by_mail($company_contact);
+    	 $contact_uid = $contact_user->id();
+        }
+    	$user_mail_domain = strtolower(strstr($user_mail, '@'));
+    	$supplier_nid = (int)fetch_supplier_nid_by_domain($user_mail_domain);
+    	if(!empty($supplier_nid))
+    	$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$supplier_nid")->fetchField();
+      $node = Node::load($supplier_nid);
+ 			$node->field_company_users[] =  $uid;
+			if($_SESSION['supplier_created']) {
+				$node->field_contact_person =  $uid;
+			}
+			$node->save();
+    }
+
+		if(($profile_type == 'Current_Supplier') && !$philips_user && $company_user) {
+			$connection = \Drupal::service('database');
+			$user = \Drupal\user\Entity\User::load($uid);
+			$user->addRole('potential_supplier');
+			$user->save();
+			$name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+			$connection = \Drupal::service('database');
+			$result = $connection->insert('user_relationships')
+  						->fields([
+   						 'requester_id' => $uid,
+    						'requestee_id' => $contact_uid,
+    						'requester_name' => $name
+  						])
+  					->execute();
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		//print $email;print $name;
+		$config = \Drupal::config('system.site');
+  		$sitename = $config->get('name');
+  		$message['to'] = $company_contact.","."yvan.davoust@philips.com";
+		$message['subject'] = "A new user". " " .$name ." "."needs you to approve access to"." ".$sitename." "."SPICE website";
+		$message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+		$message['body'] = [];
+		 $message['body'][] = "Dear"." " .$company_contact. ","."<br>".
+		 $name." "."has just created an account on".$sitename."<br>".
+		 "Through this"." ".$sitename." "."website, suppliers are invited to collaborate around our Innovation Search Areas and share their ideas with Philips as part of our SPICE program."."<br>".
+		 $name." "."has indicated that you were his/her main Philips contact. As such, you are asked to grant or deny access of this company to the restricted Innovation Search Areas posted. <b><i>We should only grant access to our preferred and strategic suppliers.</i></b>"."<br>".
+		 "<u>You will need to accept to be the 'Philips contact' for this supplier by clicking on the link".$name."'s Philips Supplier Account Manager on the page".$host."/relationship/received/"."</u><br>".
+		   "You should only approve requests if following 4 conditions are met:<br>".
+		   "1."." ".$company." "."is a supplier you are responsible for (you belong to Philips Procurement and are the SAM for this supplier)<br>".
+		   "2. You agree to give"." ".$company." "."access to our SPICE Innovation challenges, and agree to have"." ".$company." "."answer those by posting innovation on the SPICE website.<br>".
+		   "3."." ".$company." "."is not a company on the phase-out list for Philips.<br>".
+		   "4."." ".$name." "."has registered with a legitimate corporate email address from his company. (".$mail.")<br><br>".
+		   "<b>Note:</b> If you do not have access to"." ".$sitename.", you will need first to register to this website at"." ".$host." "."with your @philips.com email address.<br>".
+		   "The supplier will not be able to see our innovation challenges nor post innovations until you have completed this step.<br>".
+		   "Please forward this mail to yvan.davoust@philips.com should you have any hesitation whether or not to approve this request, or in case you need support with this process or see an 'Access Denied' message on the website.<br>".
+		   "Looking forward to seeing you online at"." ".$host."<br>".
+		   "On behalf of the Philips SPICE team<br>".
+		   "Yvan Davoust";
+		 "Philips Contact:".$company_contact;
+
+\Drupal::messenger()->addMessage(t('The Philips Procurement contact you identified has been informed and is expected to confirm your registration. You will then receive a confirmation by email to have full access to the site and see our most recent innovation search areas.. '),'status',true);
+		}
+		else {
+				$message['send'] = FALSE;
+			return;
+		}
+
+	}
+
+	if($message['subject'] == 'registered_suppliers_no_philips_mail') {
+                 $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator','community_mgr')")->fetchAll();
+foreach($uids as $k=>$u) {
+$mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
+}
+
+		$body = $message['body'][0];
+			$data = explode("+",$body);
+			$uid = (int)explode("-",$data[0])[1];
+			$user_mail = explode("-",$data[1])[1];
+			$profile_type =  $_SESSION['profile_type'];
+			$company_contact = $_SESSION['company_contact'];
+	
+		$philips_user = false;
+		if(strpos($user_mail,'@philips.com') >0 || strpos($user_mail,'@Philips.com') >0 || strpos($user_mail,'@PHILIPS.COM') >0) {
+			$philips_user = true;
+		}
+		$company_user = false;
+		if(!empty($company_contact)) {
+		if(strpos($company_contact,'@philips.com') >0 || strpos($company_contact,'@Philips.com') >0 || strpos($company_contact,'@PHILIPS.COM') >0) {
+			$company_user = true;
+		}
+                }
+	//	print_r($profile_type);
+		//print $philips_user;die;
+		//print_r($uid);die;
+		
+		if(($profile_type == 'Current_Supplier' || $profile_type == 'New_Company') && !$philips_user && !$company_user) {
+			$connection = \Drupal::service('database');
+		  
+  			$user = \Drupal\user\Entity\User::load($uid);
+				$user->addRole('potential_supplier');
+				$user->save();
+			$name = $user->get('name')->value;
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		//print $email;print $name;
+		$config = \Drupal::config('system.site');
+  		$sitename = $config->get('name');
+                $message['to'] = $mail_id;
+		$message['subject'] = "A new Philips user". " " .$name ." "."has registered has registered without Philips contact.";
+		$message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+		$message['body'] = [];
+		 $message['body'][] = "A new Philips user"." " .$name. " ". "has registered into"." " . $sitename."<br><br>".
+		 "This new user did not indicate any Philips buyer email, and is being granted access as a candidate supplier. Please review and block the account if necessary."."<br><br>".
+		 "Account can be reviewed at"." ".$host."/user/".$uid."/edit"."<br>".
+		 "(you should specifically ensure supplier is using a corporate email address and not a generic one - "." ".$user_mail.")";
+
+//\Drupal::messenger()->addMessage(t('Thanks for your registration - you are now almost ready to start innovating with Philips !'),'status',true);
+		}
+		else {
+				$message['send'] = FALSE;
+			return;
+		}
+	}
+
+	if($message['subject'] == 'registered_individual_inventor') {
+                $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator')")->fetchAll();
+foreach($uids as $k=>$u) {
+$mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
+}
+		$body = $message['body'][0];
+//print_r($body);die;
+			$data = explode("+",$body);
+			$uid = (int)explode("-",$data[0])[1];
+			$user_mail = explode("-",$data[1])[1];
+			$profile_type =  $_SESSION['profile_type'];
+	
+		$philips_user = false;
+		if(strpos($user_mail,'@philips.com') >0 || strpos($user_mail,'@Philips.com') >0 || strpos($user_mail,'@PHILIPS.COM') >0) {
+			$philips_user = true;
+		}
+	//	print_r($profile_type);
+		//print $philips_user;die;
+		//print_r($uid);die;
+		if($profile_type == 'Individual_Inventor' && !$philips_user) {
+			$connection = \Drupal::service('database');
+		  
+  			$user = \Drupal\user\Entity\User::load($uid);
+				$user->addRole('inventor');
+				$user->save();
+			$name = $user->get('name')->value;
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		//print $email;print $name;
+		$config = \Drupal::config('system.site');
+  		$sitename = $config->get('name');
+                $message['to'] = $mail_id;
+		$message['subject'] = "A new Philips user". " " .$name ." "."has registered as Individual Inventor.";
+		$message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+		$message['body'] = [];
+		 $message['body'][] = "A new Philips user"." " .$name. " ". "has registered into"." " . $sitename."<br><br>".
+		 "Account needs to be reviewed and approved by an admin at"." ".$host."/user/".$uid."/edit"."<br><br>".
+"Recommended process:"."<br>".
+"1. check whether it is a legitimate supplier in TSL: lookup SAM name in TSL and add it to Supplier Profile in SPICE"."<br>".
+"2. If not in TSL, ask Supplier by email to confirm name/email of their SAM"."<br>".
+"3. Once added to SPICE, unblock supplier on account page (admin) and send mail to SAM with link to Supplier Profile to ask him to click on 'Become <supplier name>'s Philips Supplier Account Manager'";
+//\Drupal::messenger()->addMessage(t('Thanks for your registration - you are now almost ready to start innovating with Philips !'),'status',true);
+		}
+		else {
+				$message['send'] = FALSE;
+			return;
+		}
+	}
+
+	if($message['subject'] == 'new_profile_save') {
+               $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator')")->fetchAll();
+foreach($uids as $k=>$u) {
+$mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
+}
+
+		$body = $message['body'][0];
+			$data = explode("+",$body);
+			$uid = (int)explode("-",$data[0])[1];
+			$user_mail = explode("-",$data[1])[1];
+			$profile_type =  $_SESSION['profile_type'];
+		
+			
+		
+		
+	
+		$philips_user = false;
+		if(strpos($user_mail,'@philips.com') >0 || strpos($user_mail,'@Philips.com') >0 || strpos($user_mail,'@PHILIPS.COM') >0) {
+			$philips_user = true;
+		}
+	//	print_r($profile_type);
+		//print $philips_user;die;
+		//print_r($uid);die;
+		if($profile_type == 'Philips_Employee' && !$philips_user) {
+			$connection = \Drupal::service('database');
+		  $connection->update('users_field_data')
+  			->fields([
+    			'status' => 1,
+  			])
+  			->condition('uid', $uid)
+  			->execute();
+  			$user = \Drupal\user\Entity\User::load($uid);
+				$user->addRole('inventor');
+				$user->save();
+			$name = $user->get('name')->value;
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		//print $email;print $name;
+		$config = \Drupal::config('system.site');
+  		$sitename = $config->get('name');
+                $message['to'] = $mail_id;
+		$message['subject'] = "A new Philips user". " " .$name ." "."has registered into"." " .$sitename." "."without proper @Philips.com email address";
+		$message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+		$message['body'] = [];
+		 $message['body'][] = "A new Philips user"." " .$name. " ". "has registered into"." " . $sitename." "."without proper @Philips.com email address"."<br><br>".
+"Email used:".$user_mail."<br><br>".
+"The use has been warned and granted an 'indiviual inventor' role only.";
+		}
+		else {
+				$message['send'] = FALSE;
+			return;
+		}
+	}
+
+	if($message['subject'] == 'new_profile_save_selfsend') {
+		$body = $message['body'][0];
+			$data = explode("+",$body);
+			$uid = (int)explode("-",$data[0])[1];
+			$user_mail = explode("-",$data[1])[1];
+			$profile_type =  $_SESSION['profile_type'];
+		$philips_user = false;
+		if(strpos($user_mail,'@philips.com') >0 || strpos($user_mail,'@Philips.com') >0 || strpos($user_mail,'@PHILIPS.COM') >0) {
+			$philips_user = true;
+		}
+	//	print_r($profile_type);
+		//print $philips_user;die;
+		//print_r($uid);die;
+		if($profile_type == 'Philips_Employee' && !$philips_user) {
+			$name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+			//$name = $user->get('name')->value;
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		//print $email;print $name;
+		$config = \Drupal::config('system.site');
+  		$sitename = $config->get('name');
+  		$message['to'] = $user_mail;
+		$message['subject'] = "Please verify your new SPICE account";
+		$message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+		$message['body'] = [];
+		 $message['body'][] = "Dear"." ".$name."<br>".
+		 "You have just created a new account on SPICE, the Philips Open Innovation Platform."."<br>".
+		 "Nevertheless, despite the fact that you indicated being a Philips employee, we could not recognize your Philips corporate email adress (you used  (".$user_mail.")"."<br>".
+		 "You will therefore only be granted the limited access of an external individual inventor."."<br>".
+		 "If you would like to get the Philips employee access, please create a new account using your philips corporate email address."."<br><br>".
+		 "Please forward this mail to yvan.davoust@philips.com should you have any issue with your account."."<br><br>".
+		 "Looking forward to seeing you online at"." ".$host."<br><br>".
+		 "On behalf of the Philips SPICE team"."<br>".
+		 "Yvan Davoust";
+		 \Drupal::messenger()->addMessage(t('You have just created a new account on SPICE, the Philips Open Innovation Platform.<br>
+Nevertheless, despite the fact that you indicated being a Philips employee, we could not recognize your Philips corporate email adress (you used '.$user_mail.').<br>
+You will therefore only be granted the limited access of an external individual inventor.<br>
+If you would like to get the Philips employee access, please create a new account using your philips corporate email address.'),'status',true);
+		}
+		else {
+				$message['send'] = FALSE;
+			return;
+		}
+	}
+	
+	if($message['subject'] == 'innovation_new_field_search_space_supplier') {
+		$uid = \Drupal::currentUser()->id();
+		$current_user_mail = \Drupal::currentUser()->getEmail();
+		$profile_id =  \Drupal::database()->query("SELECT profile_id FROM {profile} profle  WHERE profle.uid=$uid")->fetchField();
+//print $profile_id;
+		if(!empty($profile_id)) {
+			$philips_contact_mail =  \Drupal::database()->query("SELECT field_company_contact_value FROM {profile__field_company_contact} pfcc  WHERE pfcc.entity_id=$profile_id")->fetchField();
+		}
+		if(!empty($philips_contact_mail)) {
+//print $philips_contact_mail;
+			$innov_nid = (int)$message['body'][0];
+//print $innov_nid;
+				$innov_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$innov_nid")->fetchField();
+				$challenge_nid =  \Drupal::database()->query("SELECT field_search_space_target_id FROM {node__field_search_space} node  WHERE node.entity_id=$innov_nid")->fetchField();
+				$challenge_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$challenge_nid")->fetchField();
+				$innov_node_body =  \Drupal::database()->query("SELECT body_value FROM {node__body} node  WHERE node.entity_id=$innov_nid")->fetchField();
+				$message['to'] = $philips_contact_mail;
+			$message['subject'] = "Your Supplier"." ".$current_user_mail. " " ."has posted an answer to the innovation challenge". " " .$challenge_node_title;
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+				$message['body'][] = "Dear Colleague,"."<br>".
+"Your Supplier"." ".$current_user_mail. " " ."has posted an answer to the innovation challenge". " "."<b>".$challenge_node_title."<b>"."<br><br>".
+"Details on:"."<a href=".$host.'/node/'.$innov_nid.'>'.$innov_node_title.'</a>  <br><br>'.
+"Innovation: "."<b>".$innov_node_title."</b><br>".
+"Description: ".$innov_node_body."<br>".
+"The challenge owner has been informed. You can track progress and communication directly on the SPICE portal using the link above or via your dashboard page."."<br>".
+"Sincerely,"."<br>".
+"The Philips Supplier Innovation team.";
+//print_r($message['body']);
+		}
+		else {
+			$message['send'] = FALSE;
+			return;
+		}
+
+	}
+
+	if($message['subject'] == 'send_scoutcast_to_philips_communities_new') {
+		$uid = \Drupal::currentUser()->id();
+		$current_user_mail = \Drupal::currentUser()->getEmail();
+		$scoutcast_nid = (int)$message['body'][0];
+		$picture_id =  \Drupal::database()->query("SELECT field_picture_target_id FROM {node__field_picture} node  WHERE node.entity_id=$scoutcast_nid")->fetchField();
+		if(!empty($picture_id)) {
+			$author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$scoutcast_nid")->fetchField();
+			if(!empty($author_uid)) {
+				$author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$author_uid")->fetchField();
+			}
+				$connection = \Drupal::service('database');
+				$sid  = \Drupal::database()->query('SELECT sid FROM {subscriptions} u WHERE module =:module and field = :field and value = :nid and recipient_uid = :recipient_uid ', ['module' => 'node','field' => 'nid','nid' => $scoutcast_nid,'recipient_uid' => $author_uid])->fetchField();
+		$is_subscribe = false;
+	  if($sid)
+					$is_subscribe = true;
+			
+			if(!$is_subscribe) {
+				$result = $connection->insert('subscriptions')
+  						->fields([
+   						 'module' => 'node',
+    						'field' => 'nid',
+    						'value' => $scoutcast_nid,
+    						'recipient_uid' => (int)$author_uid,
+  						])
+  					->execute();
+  			}
+			$scoutcast_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$scoutcast_nid")->fetchField();
+			$innov_node_body =  \Drupal::database()->query("SELECT body_value FROM {node__body} node  WHERE node.entity_id=$scoutcast_nid")->fetchField();
+				$message['to'] = $author_uid.','.'yvan.davoust@philips.com';
+			$message['subject'] = "New SPICE ScoutCast:"." ".$scoutcast_node_title;
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+				$message['body'][] = "A new ScoutCast has been posted in SPICE:"." ".$scoutcast_node_title."<br><br>".
+				$innov_node_body."<br><br>".
+				"Read more on SPICE portal: openinnovation.philips.com/node/".$scoutcast_nid;
+		}
+		else {
+			$message['send'] = FALSE;
+			return;
+		}
+
+	}
+	if($message['subject'] == 'send_scoutcast_to_philips_communities_update') {
+		$uid = \Drupal::currentUser()->id();
+		$current_user_mail = \Drupal::currentUser()->getEmail();
+		$scoutcast_nid = (int)$message['body'][0];
+		$picture_id =  \Drupal::database()->query("SELECT field_picture_target_id FROM {node__field_picture} node  WHERE node.entity_id=$scoutcast_nid")->fetchField();
+		if(!empty($picture_id)) {
+			$author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$scoutcast_nid")->fetchField();
+			if(!empty($author_uid)) {
+				$author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$author_uid")->fetchField();
+			}
+			$connection = \Drupal::service('database');
+				$sid  = \Drupal::database()->query('SELECT sid FROM {subscriptions} u WHERE module =:module and field = :field and value = :nid and recipient_uid = :recipient_uid ', ['module' => 'node','field' => 'nid','nid' => $scoutcast_nid,'recipient_uid' => $author_uid])->fetchField();
+		$is_subscribe = false;
+	  if($sid)
+					$is_subscribe = true;
+			
+			if(!$is_subscribe) {
+				$result = $connection->insert('subscriptions')
+  						->fields([
+   						 'module' => 'node',
+    						'field' => 'nid',
+    						'value' => $scoutcast_nid,
+    						'recipient_uid' => (int)$author_uid,
+  						])
+  					->execute();
+  			}
+			$scoutcast_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$scoutcast_nid")->fetchField();
+			$innov_node_body =  \Drupal::database()->query("SELECT body_value FROM {node__body} node  WHERE node.entity_id=$scoutcast_nid")->fetchField();
+				$message['to'] = $author_uid.','.'yvan.davoust@philips.com';
+			$message['subject'] = "New SPICE ScoutCast:"." ".$scoutcast_node_title;
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+				$message['body'][] = "A new ScoutCast has been posted in SPICE:"." ".$scoutcast_node_title."<br><br>".
+				$innov_node_body."<br><br>".
+				"Read more on SPICE portal: openinnovation.philips.com/node/".$scoutcast_nid;
+		}
+		else {
+			$message['send'] = FALSE;
+			return;
+		}
+
+	}
+
+	
+
+	if($message['subject'] == 'Innovation_follow_up_new_inform_space_owner') {
+		$current_user_mail = \Drupal::currentUser()->getEmail();
+		$assess_nid = (int)$message['body'][0];
+                if(empty($assess_nid)) {
+                  $message['send'] = FALSE;
+                  return;
+                }
+                if(!empty($assess_nid))
+		$innov_follow_nid =  \Drupal::database()->query("SELECT field_idea_target_id FROM {node__field_idea} node  WHERE node.entity_id=$assess_nid")->fetchField();
+		$challenge_nid =  \Drupal::database()->query("SELECT field_search_space_target_id FROM {node__field_search_space} node  WHERE node.entity_id=$innov_follow_nid")->fetchField();
+		if(!empty($challenge_nid)) {
+			$author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$challenge_nid")->fetchField();
+			if(!empty($author_uid)) {
+				$author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$author_uid")->fetchField();
+			}
+			$node = Node::load($innov_follow_nid);
+			$node->set('field_status', 3); // This is a Field added in to the content type
+			$node->save();
+		 /* $connection = \Drupal::service('database');
+		  $num_updated = $connection->update('node__field_status')
+  			->fields([
+    			'field_status_value' => 3,
+  			])
+  			->condition('entity_id', $innov_follow_nid)
+  			->execute();*/
+		
+		$config = \Drupal::config('system.site');
+  	$sitename = $config->get('name');
+		$message['to'] = $author_mail;
+		$accessory_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$assess_nid")->fetchField();
+				$innov_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$innov_follow_nid")->fetchField();
+				
+				$accessory_author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$assess_nid")->fetchField();
+				$accessory_author_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$accessory_author_uid")->fetchField();
+				$challenge_author_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$author_uid")->fetchField();
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+		$message['subject'] = "A new assessment has been started within your Innovation Challenge";
+		$message['body'][] = "Dear"." ".$challenge_author_name.","."<br>".
+	"A new Follow up Assessment has just been started for the Innovation"." ".$innov_node_title."<br>".
+	//"Follow up Assessment was initiated by".$current_user_mail."<br>".
+
+"Please visit"." "."<a href=".$host.'/node/'.$innov_follow_nid.'>'.$innov_node_title.'</a> to check it out! <br><br>'.
+"The Philips Supplier Innovation team.";
+}
+else {
+				$message['send'] = FALSE;
+				return;
+			}
+		
+	}
+
+	if($message['subject'] == 'Innovation_follow_up_new_inform_assessors') {
+		$assess_nid = (int)$message['body'][0];
+                if(empty($assess_nid)) {
+                   $message['send'] = FALSE;
+		   return;
+                }
+                if(!empty($assess_nid)) {
+		$innov_follow_nid =  \Drupal::database()->query("SELECT field_idea_target_id FROM {node__field_idea} node  WHERE node.entity_id=$assess_nid")->fetchField();
+		$uid_result =  \Drupal::database()->query("SELECT field_assessor_target_id FROM {node__field_assessor} node  WHERE node.entity_id=$assess_nid")->fetchAll();
+                 }
+		foreach($uid_result as $key=>$value) {
+				$uids[] = $value->field_assessor_target_id;
+				$to_mails[] =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$value->field_assessor_target_id")->fetchField();
+			}
+		
+	        if(!empty($to_mails))	
+		$to_mails = array_unique($to_mails);
+		$count = 0;
+		foreach($to_mails as $key=>$value) {
+			$k .= $value.",";
+			$count++;
+			if($count == 9) {
+				break;
+			}
+		}
+		$config = \Drupal::config('system.site');
+  	$sitename = $config->get('name');
+		$message['to'] = $k;
+		$accessory_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$assess_nid")->fetchField();
+				$innov_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$innov_follow_nid")->fetchField();
+				
+				$accessory_author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$assess_nid")->fetchField();
+				$accessory_author_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$accessory_author_uid")->fetchField();
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+		$message['subject'] = "You have been invited to assess a new innovation idea!";
+		$message['body'][] = "Dear Colleague,"."<br>".
+	"You have been invited by"." ".$accessory_author_name. " " ."to join a follow up assessment for a SPICE supplier innovation idea posted on". " "."<b>".$sitename."<b>"."<br><br>".
+"Innovation idea: "."<b>".$innov_node_title."</b><br>".
+"Follow up proposal: ".$accessory_node_title."<br><br>".
+"Check out the details at"." "."<a href=".$host.'/node/'.$assess_nid.'>'.$accessory_node_title.'</a>  <br>'.
+"Looking forward to your contribution to quickly assess this idea!"."<br><br>".
+"Sincerely,"."<br>".
+"The Philips Supplier Innovation team.";
+		
+	}
+	if($message['subject'] == "close_submission") {
+			$close_nid = (int)$message['body'][0];
+                       if(empty($close_nid)) {
+                         $message['send'] = FALSE;
+                         return;
+                       } 
+                 if(!empty($close_nid))
+		$innov_nid =  \Drupal::database()->query("SELECT field_idea_target_id FROM {node__field_idea} node  WHERE node.entity_id=$close_nid")->fetchField();
+
+			$author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$close_nid")->fetchField();
+			$innov_author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$innov_nid")->fetchField();
+		$innov_author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$innov_author_uid")->fetchField();
+				$author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$author_uid")->fetchField();
+				$close_sub_body =  \Drupal::database()->query("SELECT body_value FROM {node__body} node  WHERE node.entity_id=$close_nid")->fetchField();
+				$close_sub_desicion =  \Drupal::database()->query("SELECT field_decision_value FROM {node__field_decision} node  WHERE node.entity_id=$close_nid")->fetchField();
+				$close_sub_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$close_nid")->fetchField();
+				if($close_sub_desicion == 1)
+					$sub_desicion = "Rejected (not fitting with Philips needs)";
+				elseif ($close_sub_desicion == 2) 
+					$sub_desicion = "Parked (possible future interest)";
+				elseif ($close_sub_desicion == 3) 
+					$sub_desicion = "Added to Roadmap (confirmed future interest)";
+				elseif ($close_sub_desicion == 4) 
+					$sub_desicion = "Implementing";
+		$message['to'] = $innov_author_mail.','.$author_mail.','."yvan.davoust@philips.com";
+				$message['subject'] = "A decision has been taken for your innovation submission";
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+				$message['body'][] = "Dear Innovator,"."<br>".
+				"Thank you again for your innovation submission to the Philips and Suppliers innovation portal!"."<br><br>".
+				"Your submission has been assessed by the Philips team responsible for the Innovation Challenge you answered."."<br>".
+				"Highlights of the decision:"."<br>".
+"Decision:".$sub_desicion.'<br>'.
+"Summary: "."<b>".$close_sub_node_title."</b><br>".
+"Details: ".$close_sub_body."<br><br>".
+"Do not hesitate to use the comment function for any question on your innovation page at"." ".$host."<br><br>".
+"Thank you for demonstrating your willingness to innovate with Philips with your submission!"."<br><br>".
+"The SPICE team";
+	}
+
+
+
+	if($message['subject'] == 'innovation_new_field_search_space') {
+		$roles_condition = false;
+					$roles = \Drupal::currentUser()->getRoles();
+					if(in_array('inventor', $roles) || in_array('philips_supplier', $roles) || in_array('philips_preferred_supplier', $roles) || in_array('philips_user', $roles) || in_array('challenge_owner', $roles) || in_array('community_support', $roles) || in_array('innovation_champion', $roles) || in_array('community_mgr', $roles) || in_array('administrator', $roles)) {
+  					// Do something if user has role editor
+  					$roles_condition = true;
+					}
+		$innov_nid = (int)$message['body'][0];
+		$challenge_nid =  \Drupal::database()->query("SELECT field_search_space_target_id FROM {node__field_search_space} node  WHERE node.entity_id=$innov_nid")->fetchField();
+		//print $challenge_nid;die;
+		if(!empty($challenge_nid) && $roles_condition) {
+			$contact_uid =  \Drupal::database()->query("SELECT field_contact_person_target_id FROM {node__field_contact_person} node  WHERE node.entity_id=$challenge_nid")->fetchField();
+			$author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$challenge_nid")->fetchField();
+			if(!empty($contact_uid)) {
+				$contact_person_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$contact_uid")->fetchField();
+				$author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$author_uid")->fetchField();
+				$innov_nid = (int)$message['body'][0];
+				$innov_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$innov_nid")->fetchField();
+				$challenge_node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$challenge_nid")->fetchField();
+				$innov_node_body =  \Drupal::database()->query("SELECT body_value FROM {node__body} node  WHERE node.entity_id=$innov_nid")->fetchField();
+				$innov_author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$innov_nid")->fetchField();
+				$innov_author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$innov_author_uid")->fetchField();
+				
+				
+				$connection = \Drupal::service('database');
+				$num_updated = $connection->update('node__field_philips_owner')
+  			->fields([
+    			'field_philips_owner_target_id' => $contact_uid,
+  			])
+  			->condition('entity_id', $innov_nid)
+  			->execute();
+			
+				$result = $connection->insert('subscriptions')
+  						->fields([
+   						 'module' => 'node',
+    						'field' => 'nid',
+    						'value' => $innov_nid,
+    						'recipient_uid' => (int)$author_uid,
+  						])
+  					->execute();
+  			$result = $connection->insert('subscriptions')
+  						->fields([
+   						 'module' => 'node',
+    						'field' => 'nid',
+    						'value' => $innov_nid,
+    						'recipient_uid' => (int)$contact_uid,
+  						])
+  					->execute();
+				$message['to'] = $contact_person_mail.','.$author_mail;
+				$message['subject'] = $innov_author_mail. " " ."has posted an answer to your innovation challenge". " " .$challenge_node_title;
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+		$comment_body = $comment_payload['comment_body'][0]['value'];
+				$message['body'][] = "Dear Colleague,"."<br>".
+$innov_author_mail. " " ."has posted an answer to your innovation challenge". " "."<b>".$challenge_node_title."<b>"."<br><br>".
+"Details on:"."<a href=".$host.'/node/'.$innov_nid.'>'.$innov_node_title.'</a>  <br><br>'.
+"Innovation: "."<b>".$innov_node_title."</b><br>".
+"Description: ".$innov_node_body."<br>".
+"Thanks for ensuring fast assessment and feedback to the submitter!"."<br>".
+"Sincerely,"."<br>".
+"The Philips Supplier Innovation team.";
+			}
+			else {
+				$message['send'] = FALSE;
+				return;
+			}
+		}
+		else {
+			$message['send'] = FALSE;
+			return;
+		}
+	}
+	if($message['subject'] == 'comment_private_community_managers') {
+		$cid = (int)$message['body'][0];
+		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+		$comment_payload = $comment->toArray();
+		$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+		$cid_uid = $comment_payload['uid'][0]['target_id'];
+		$cid_user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$cid_uid")->fetchField();
+		$cid_user_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$cid_uid")->fetchField();
+		$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+		$uid = $comment_payload['uid'][0]['target_id'];
+		$user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		$user_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		//$message['to'] = $user_mail;
+		$message['subject'] = "New comment has been posted to". " " .$node_title;
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		$comment_body = $comment_payload['comment_body'][0]['value'];
+		$is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
+		if(!$is_private_comment) {
+			//don't send mail
+			$message['to'] = '';
+			$message['send'] = FALSE;
+			return;
+		}
+		else {
+			$message['subject'] = "New comment has been posted to". " " .$node_title;
+		$message['body'] = [];
+		$message['body'][] = "Dear Admin/Community Mgr,
+
+<a href=".$host.'/node/'.$comment_nid.'>'.$node_title.'</a> got new comment from <a href='.$host.'/user/'.$uid.'>'.$cid_user_name.'</a>.
+<br>
+<strong>Comment:</strong>'."<br>".
+$comment_body;
+}
+	}
+	if($message['subject'] == 'field_search_space') {
+		$cid = (int)$message['body'][0];
+		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+		$comment_payload = $comment->toArray();
+		$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+		$challenge_nid =  \Drupal::database()->query("SELECT field_search_space_target_id FROM {node__field_search_space} node  WHERE node.entity_id=$comment_nid")->fetchField();
+		//print $challenge_nid;die;
+		if(!empty($challenge_nid)) {
+			$is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
+			if(!$is_private_comment) {
+			//don't send mail
+				$message['subject'] = '';
+				$message['to'] = '';
+				$message['send'] = FALSE;
+				return;
+			}
+			else {
+			$contact_uid =  \Drupal::database()->query("SELECT field_contact_person_target_id FROM {node__field_contact_person} node  WHERE node.entity_id=$challenge_nid")->fetchField();
+			$author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$challenge_nid")->fetchField();
+			if(!empty($contact_uid)) {
+				$contact_person_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$contact_uid")->fetchField();
+				$author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$author_uid")->fetchField();
+				$cid = (int)$message['body'][0];
+				$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+				$comment_payload = $comment->toArray();
+				$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+				$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+				$cid_uid = $comment_payload['uid'][0]['target_id'];
+		$cid_user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$cid_uid")->fetchField();
+		$cid_user_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$cid_uid")->fetchField();
+				$message['to'] = $contact_person_mail.','.$author_mail;
+				$message['subject'] = "New comment has been posted to". " " .$node_title;
+				$host = \Drupal::request()->getSchemeAndHttpHost();
+				$message['body'] = [];
+		$comment_body = $comment_payload['comment_body'][0]['value'];
+				$message['body'][] = "Dear SPICE Challenge owner,
+
+<a href=".$host.'/node/'.$comment_nid.'>'.$node_title.'</a> got new comment from <a href='.$host.'/user/'.$uid.'>'.$cid_user_name.'</a>.
+
+<br>
+
+<strong>Comment:</strong>'."<br>".
+$comment_body;
+			}
+			else {
+				$message['subject'] = '';
+				$message['to'] = '';
+				$message['send'] = FALSE;
+				return;
+			}
+		}
+		}
+		else {
+			$message['to'] = '';
+			$message['send'] = FALSE;
+			return;
+		}
+	}
+	if($message['subject'] == 'comment_private_author') {
+		$cid = (int)$message['body'][0];
+		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+		$comment_payload = $comment->toArray();
+		$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+		$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+		$uid = $comment_payload['uid'][0]['target_id'];
+		$user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		$user_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		$comment_body = $comment_payload['comment_body'][0]['value'];
+		$is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
+		if(!$is_private_comment) {
+			//print "test";die;
+			$message['send'] = FALSE;
+			return;
+		}
+		else {
+		$message['to'] = $user_mail;
+		$message['subject'] = "New private comment has been posted to". " " .$node_title;
+		$message['body'] = [];
+		$message['body'][] = "Dear Philips user,
+
+Thank you for your contribution. You can come back anytime to this page (<a href=".$host.'/node/'.$comment_nid.'>'.$node_title.'</a>) to add any additional relevant information that could help Philips team assess your idea.
+<br>
+<strong>Comment:</strong>'."<br>".
+$comment_body;
+}
+}
+if($message['subject'] == "comment_public-Private") {
+ $message['send'] = FALSE;
+return;
+
+}
+if($message['subject'] == "comment_private_send_role_based-") {
+ $message['send'] = FALSE;
+return;
+}
+if($message['subject'] == "comment_public-") {
+		$cid = (int)$message['body'][0];
+//print_r($cid);die;
+		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+		$comment_payload = $comment->toArray();
+		$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+		$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+		$uid = $comment_payload['uid'][0]['target_id'];
+		$user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		$comment_body = $comment_payload['comment_body'][0]['value'];
+		$is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
+
+		if($is_private_comment) {
+			//print "test";die;
+			$message['send'] = FALSE;
+			return;
+		}
+		else {
+			$message['subject'] = "New public comment has been posted to". " " .$node_title;
+                $connection = \Drupal::service('database');
+    $sid  = \Drupal::database()->query('SELECT sid FROM {subscriptions} u WHERE module =:module and field = :field and value = :nid and recipient_uid = :recipient_uid ', ['module' => 'node','field' => 'nid','nid' => $comment_nid,'recipient_uid' => $uid])->fetchField();
+    $is_subscribe = false;
+    $subscribe = true;
+    if($sid)
+          $is_subscribe = true;
+    if($subscribe) {
+      if(!$is_subscribe) {
+            $result = $connection->insert('subscriptions')
+              ->fields([
+               'module' => 'node',
+                'field' => 'nid',
+                'value' => $comment_nid,
+                'recipient_uid' => (int)$uid,
+              ])
+            ->execute();
+          }
+    }
+		$uid_result  = \Drupal::database()->query('SELECT recipient_uid FROM {subscriptions} u WHERE module =:module and field = :field and value = :nid ', ['module' => 'node','field' => 'nid','nid' => $comment_nid])->fetchAll();
+			foreach($uid_result as $key=>$value) {
+				$uids[] = $value->recipient_uid;
+				$to_mails[] =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$value->recipient_uid")->fetchField();
+			}
+			if(!empty($to_mails))
+			$to_mails = array_unique($to_mails);
+		foreach($to_mails as $key=>$value) {
+			$k .= $value.",";
+		}
+		//print_r($k);die;
+		$message['to'] = $k;
+
+		$message['body'] = [];
+		$message['body'][] = "Dear Admin/Community Mgr,
+
+<a href=".$host.'/node/'.$comment_nid.'>'.$node_title.'</a> got new comment from <a href='.$host.'/user/'.$uid.'>'.$user_name.'</a>.
+
+<br>
+
+<strong>Comment:</strong>'."<br>".
+$comment_body;
+}
+		//print_r($comment);die;
+	}
+	if($message['subject'] == "comment_private_send_role_based-Private") {
+                $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('community_mgr')")->fetchAll();
+foreach($uids as $k=>$u) {
+$mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
+}
+
+		$cid = (int)$message['body'][0];
+//print_r($cid);die;
+		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+		$comment_payload = $comment->toArray();
+		$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+		$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+		$uid = $comment_payload['uid'][0]['target_id'];
+		$user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		$comment_body = $comment_payload['comment_body'][0]['value'];
+		$is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
+		//print $is_private_comment;die;
+		
+		if($is_private_comment) {
+                       $message['to'] = $mail_id;
+			$message['subject'] = "New comment has been posted3 to". " " .$node_title;
+		$message['body'] = [];
+		$message['body'][] = "Dear Admin/Community Mgr,
+
+<a href=".$host.'/node/'.$comment_nid.'>'.$node_title.'</a> got new comment from <a href='.$host.'/user/'.$uid.'>'.$user_name.'</a>.
+
+<br>
+
+<strong>Comment:</strong>'."<br>".
+$comment_body;
+ }
+ else {
+			//print "test";die;
+ 	$message['to'] = '';
+ 		$message['subject'] = '';
+			$message['send'] = FALSE;
+			return;
+		}
+
+	}
+	
+
+	if($message['subject'] == "registered") {
+                $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator')")->fetchAll();
+foreach($uids as $k=>$u) {
+$mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
+}
+
+		//print_r($message);die;
+		$uid = (int)$message['body'][0];
+		//print_r($uid);
+			$_SESSION['Philips_user'] = true;
+			$user = User::load($uid);
+			$email = $user->get('mail')->value;
+			$connection = \Drupal::service('database');
+				$result = $connection->insert('subscriptions')
+  						->fields([
+   						 'module' => 'node',
+    						'field' => 'type',
+    						'value' => 'innovation',
+    						'recipient_uid' => $uid,
+  						])
+  					->execute();
+				$result = $connection->insert('subscriptions')
+  						->fields([
+   						 'module' => 'node',
+    						'field' => 'type',
+    						'value' => 'innovation_follow_up',
+    						'recipient_uid' => $uid,
+  						])
+  					->execute();
+  			
+				$result = $connection->insert('subscriptions')
+  						->fields([
+   						 'module' => 'node',
+    						'field' => 'type',
+    						'value' => 'innovation_search_space',
+    						'recipient_uid' => $uid,
+  						])
+  					->execute();
+  			$result = $connection->insert('subscriptions')
+  						->fields([
+   						 'module' => 'node',
+    						'field' => 'nid',
+    						'value' => 1,
+    						'recipient_uid' => $uid,
+  						])
+  					->execute();
+  				
+		$name = $user->get('name')->value;
+		$host = \Drupal::request()->getSchemeAndHttpHost();
+		//print $email;print $name;
+		$config = \Drupal::config('system.site');
+  		$sitename = $config->get('name');
+               $message['to'] = $mail_id;
+		$message['subject'] = "A new Philips user". " " .$name ." "."has registered into"." " .$sitename;
+		$message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+		$message['body'] = [];
+		 $message['body'][] = "A new Philips user"." " .$name. " ". "has registered into"." " . $sitename."<br>"." ".
+$email."<br>"." ".
+"Edit account:".'<a href='.$host.'/user/'.$uid.'/edit>Edit</a>';
+
+	}
+
+	if($id == 'relationship_approve') {
+		$config = \Drupal::config('system.site');
+  		$sitename = $config->get('name');
+  		$mail = $message['to'];
+  		//$contact_user = user_load_by_mail($company_contact);
+    	//$name = $contact_user->id();
+		$message['subject'] = "Preferred Supplier access grant from". " " .$sitename;
+		//$name = \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.mail=$mail")->fetchField();
+		$message['body'] = [];
+  	$message['body'][] = "Dear"." ". $mail.","."<br>"."Your Philips contact for the Supplier Innovation portal has approved your account relation." ."<br>". "New challenges may be visible on the challenges overview screen ( https://testaws.supplierinnovation.philips.com/innovation_search_areas ).<br>
+
+Thanks!
+<br>The"." ".$sitename." ".'team';
+	}
+	if($id == 'contractor_request_') {
+		$config = \Drupal::config('system.site');
+  		$sitename = $config->get('name');
+	$data = $_SESSION['comment_array'];
+	$author_uid = $data['uid'];
+	$cid = (int)$data['cid'];
+	$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+	$comment_payload = $comment->toArray();
+	$host = \Drupal::request()->getSchemeAndHttpHost();
+	$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+	$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+	$node_body =  \Drupal::database()->query("SELECT body_value FROM {node__body} node  WHERE node.entity_id=$comment_nid")->fetchField();
+	$comment_body = $data['comment_body'][0]['value'];
+	$is_private_comment = $data['field_private_comment']['value'];
+	if(isset($data['field_email_comment_to']))
+	$to_comment = $data['field_email_comment_to'];
+  if(!empty($to_comment) && count($to_comment) > 0 && $is_private_comment) {
+  	$message['subject'] = "Check out this innovation from". " " .$sitename;
+  	$author_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$author_uid")->fetchField();
+  	$message['body'] = [];
+  	$message['body'][] = "Dear"." ". $message['to'].","."<br>".$author_name.","."a Philips SPICE user would like you to check out this innovation posted on SPICE.<br><b>Innovation: 
+
+<a href=".$host.'/node/'.$comment_nid.'>'.$node_title.'</a> </b>, posted by'." ".$author_name.'('.$host.'/node/'.$comment_nid.')<br>
+<i>Note from'.$author_name.': <b>'.$comment_body.'</b><br></i></a>.Feel free to use the comments feature to ask clarifying questions to the innovator. 
+<br>To access this innovation on the SPICE portal, you can simply <a href=https://www.supplierinnovation.philips.com/user/register>register here</a> with your @philips.com email address. 
+<br>
+<blockquote><i><ins>Details on the innovation: </ins>'.
+$node_body.'
+</i><br></blockquote>
+Thanks!
+<br>The'." ".$sitename." ".'team';
+  }
+  else {
+  	$message['send'] = FALSE;
+				return;
+  }
+
+		
+	}
+	
+}
+
+function spice_utility_user_presave(UserInterface $account) {
+	//$account->getInitialEmail();die;
+	//print $account->TIMEZONE_DEFAULT;die;
+	 $email = $account->getInitialEmail();
+	 /*$uid =  \Drupal::database()->query("SELECT uid FROM {users_field_data} user  WHERE user.mail=$email")->fetchField();
+	 $profile_id =  \Drupal::database()->query("SELECT profile_id FROM {profile} pfcc  WHERE pfcc.uid=$uid")->fetchField();
+	 $profile_type =  \Drupal::database()->query("SELECT field_user_profile_type_value FROM {profile__field_user_profile_type} pfcc  WHERE pfcc.entity_id=$profile_id")->fetchField();
+
+		$philips_user = false;
+		if(strpos($email,'@philips.com') >=0 || strpos($email,'@Philips.com') >=0 || strpos($email,'@PHILIPS.COM') >=0) {
+			$philips_user = true;
+		}
+		if($profile_type == 'Philips_Employee' && !$philips_user) {
+			if($account->isBlocked()) {
+			$account->activate();
+			$account->addRole("inventor");
+		 }
+		}*/
+	 $domain = substr($email, strrpos($email, '@') + 1); 
+	 if ($domain == 'philips.com') {
+			$account->activate();
+			$account->addRole("philips_user");
+	 }
+}
+
+
+/**
+ * Implements hook_page_attachments()
+ */
+function spice_utility_page_attachments(array &$attachments) {
+	$host = \Drupal::request()->getSchemeAndHttpHost();
+//print $host;die;
+	$attachments['#attached']['library'][] = 'spice_utility/myscripts';
+	$file = "./profile_data_1.csv";
+  if (($h = fopen($file, "r")) !== FALSE) {
+  	$count = 0;
+    // Convert each line into the local $data variable
+  /* while (($data = fgetcsv($h, 100000, ",")) !== FALSE) { 
+    	//print $count;die;
+    	if($count > 0) {
+    		if($data[1] == 'I am a Royal Philips employee') 
+    			$ph_employ = 1;
+    		else
+    			$ph_employ = 0;
+    		if($data[14] == 'Yes') 
+    			$sq = 1;
+    		else
+    			$sq = 0;
+    		//print_r($data);
+    		//print $data[0];die;
+    		$data[0] = str_replace(",", "", $data[0]);
+    		$uid = \Drupal::database()->query('SELECT uid FROM {users} u WHERE uid = :uid', ['uid' => $data[0]])->fetchField();
+    		print $uid;
+    		if(!empty($uid)) {
+    		$profile = Profile::create([
+    			'type' => 'main',
+    			'uid' => $uid,
+    			'field_i_am_a_philips_employee' => $ph_employ,
+    			'field_user_profile_type' => $data[2],
+    			'field_company' => $data[3],
+    			'field_first_name' => $data[4],
+    			'field_last_name' => $data[5],
+    			'field_job_title' => $data[6],
+    			'field_business_group' => $data[7],
+    			'field_location' => $data[8],
+    			'field_website' => $data[9],
+    			'field_company_contact' => $data[10],
+    			'field_responsible_commodity_team' => $data[11],
+    			'field_vgu' => $data[12],
+    			'field_company_profile' => $data[13],
+    			'field_sqope500' => $sq
+  			]);
+
+  			$profile->setDefault(TRUE);
+  			$profile->save();
+  			}//if
+    		//print_r($data);die;
+    	
+    	
+     }//if
+
+    	$count++;
+    }//while*/
+   
+}//if
+}
+
+function spice_utility1111111111111111111111_preprocess_views_view_field(&$vars) {
+	//print $vars['view']->current_display;die;
+	/*$vgu = $vars['row']->field_company_users_users_field_data__node__field_vgu_field_;
+	$nid_result  = \Drupal::database()->query('SELECT entity_id FROM {node__field_vgu} u WHERE field_vgu_value = :vgu', ['vgu' => $vgu])->fetchField();
+	$user_result  = \Drupal::database()->query('SELECT field_company_users_target_id FROM {node__field_company_users} u WHERE entity_id = :vgu', ['vgu' => $nid_result])->fetchAll();
+	$sum = 0;
+	foreach($user_result as $key=>$value) {
+		$uid = $value->field_company_users_target_id;
+		$value =  \Drupal::database()->query("SELECT count(nid) FROM {node_field_data} node WHERE type='innovation' and status=1 and uid=$uid")->fetchField();
+		$sum = $sum + $value;
+	}*/
+	//$vars['row']->
+
+	if(isset($vars['view']) && ($vars['view']->id() == 'gsrs_export_v3') && ($vars['view']->current_display == 'page_1')) {
+		if (isset($vars['view']->field) && (count($vars['view']->field) > 0)) {
+//print_r($vars['field']->options["id"]);
+			//print_r($vars['row']->_relationship_entities->get('title')->getValue());die;
+			 if ($vars['field']->options['id'] == 'nothing') {
+			 	//print $sum;die;
+			 	$vgu = $vars['row']->field_company_users_users_field_data_nid;
+//dpm($vars['row']->field_company_users_users_field_data_nid);die;
+//	$nid_result  = \Drupal::database()->query('SELECT entity_id FROM {node__field_vgu} u WHERE field_vgu_value = :vgu', ['vgu' => $vgu])->fetchField();
+$vgu = '';
+	$user_result  = \Drupal::database()->query('SELECT field_company_users_target_id FROM {node__field_company_users} u WHERE entity_id = :vgu', ['vgu' => $vgu])->fetchAll();
+	$sum = 0;
+	foreach($user_result as $key=>$value) {
+		$uid = $value->field_company_users_target_id;
+		$value =  \Drupal::database()->query("SELECT count(nid) FROM {node_field_data} node WHERE type='innovation' and status=1 and uid=$uid")->fetchField();
+//print $value;die;
+		$sum = $sum + $value;
+//if($vgu == 573)
+//print $vgu;print "</br>";print($sum);print "</br>";print $uid; print "</br>";print $value;
+         
+	}
+//if($vgu == 573)
+//print $sum;print die;
+       				$vars['output'] = $sum;
+      		}
+      		if ($vars['field']->options['id'] == 'nothing_1') {
+			 	//print $sum;die;
+			 	$vgu = $vars['row']->field_company_users_users_field_data__node__field_vgu_field_;
+			 	$nid_result  = \Drupal::database()->query('SELECT entity_id FROM {node__field_vgu} u WHERE field_vgu_value = :vgu', ['vgu' => $vgu])->fetchField();
+	$user_result  = \Drupal::database()->query('SELECT field_company_users_target_id FROM {node__field_company_users} u WHERE entity_id = :vgu', ['vgu' => $nid_result])->fetchAll();
+	$sum = 0;
+	foreach($user_result as $key=>$value) {
+		$uid = $value->field_company_users_target_id;
+		$value =  \Drupal::database()->query("SELECT count(nid) FROM {node_field_data} node INNER JOIN {node__field_status} status ON node.nid=status.entity_id WHERE node.type='innovation' and node.status=1 and node.uid=$uid and (status.field_status_value IN  ('1', '2'))")->fetchField();
+		$sum = $sum + $value;
+	}
+    
+			 	
+       				$vars['output'] = $sum;
+      		}
+      		if ($vars['field']->options['id'] == 'nothing_2') {
+      			$vgu = $vars['row']->field_company_users_users_field_data__node__field_vgu_field_;
+      				$nid_result  = \Drupal::database()->query('SELECT entity_id FROM {node__field_vgu} u WHERE field_vgu_value = :vgu', ['vgu' => $vgu])->fetchField();
+					$user_result  = \Drupal::database()->query('SELECT field_company_users_target_id FROM {node__field_company_users} u WHERE entity_id = :vgu', ['vgu' => $nid_result])->fetchAll();
+					$sum = 0;
+					foreach($user_result as $key=>$value) {
+						$uid = $value->field_company_users_target_id;
+						$value =  \Drupal::database()->query("SELECT count(nid) FROM {node_field_data} node INNER JOIN {node__field_status} status ON node.nid=status.entity_id WHERE node.type='innovation' and node.status=1 and node.uid=$uid and (status.field_status_value IN  ('3'))")->fetchField();
+						$sum = $sum + $value;
+					}
+       				$vars['output'] = $sum;
+      		}
+      		if ($vars['field']->options['id'] == 'nothing_3') {
+      			$vgu = $vars['row']->field_company_users_users_field_data__node__field_vgu_field_;
+      				$nid_result  = \Drupal::database()->query('SELECT entity_id FROM {node__field_vgu} u WHERE field_vgu_value = :vgu', ['vgu' => $vgu])->fetchField();
+					$user_result  = \Drupal::database()->query('SELECT field_company_users_target_id FROM {node__field_company_users} u WHERE entity_id = :vgu', ['vgu' => $nid_result])->fetchAll();
+					$sum = 0;
+					foreach($user_result as $key=>$value) {
+						$uid = $value->field_company_users_target_id;
+						$value =  \Drupal::database()->query("SELECT count(nid) FROM {node_field_data} node INNER JOIN {node__field_status} status ON node.nid=status.entity_id WHERE node.type='innovation' and node.status=1 and node.uid=$uid and (status.field_status_value IN  ('4'))")->fetchField();
+						$sum = $sum + $value;
+					}
+       				$vars['output'] = $sum;
+      		}
+      		if ($vars['field']->options['id'] == 'nothing_4') {
+      			$vgu = $vars['row']->field_company_users_users_field_data__node__field_vgu_field_;
+      				$nid_result  = \Drupal::database()->query('SELECT entity_id FROM {node__field_vgu} u WHERE field_vgu_value = :vgu', ['vgu' => $vgu])->fetchField();
+					$user_result  = \Drupal::database()->query('SELECT field_company_users_target_id FROM {node__field_company_users} u WHERE entity_id = :vgu', ['vgu' => $nid_result])->fetchAll();
+					$sum = 0;
+					foreach($user_result as $key=>$value) {
+						$uid = $value->field_company_users_target_id;
+						$value =  \Drupal::database()->query("SELECT count(nid) FROM {node_field_data} node INNER JOIN {node__field_status} status ON node.nid=status.entity_id WHERE node.type='innovation' and node.status=1 and node.uid=$uid and (status.field_status_value IN  ('5'))")->fetchField();
+						$sum = $sum + $value;
+					}
+       				$vars['output'] = $sum;
+      		}
+      		if ($vars['field']->options['id'] == 'nothing_5') {
+      			$vgu = $vars['row']->field_company_users_users_field_data__node__field_vgu_field_;
+      				$nid_result  = \Drupal::database()->query('SELECT entity_id FROM {node__field_vgu} u WHERE field_vgu_value = :vgu', ['vgu' => $vgu])->fetchField();
+					$user_result  = \Drupal::database()->query('SELECT field_company_users_target_id FROM {node__field_company_users} u WHERE entity_id = :vgu', ['vgu' => $nid_result])->fetchAll();
+					$sum = 0;
+					foreach($user_result as $key=>$value) {
+						$uid = $value->field_company_users_target_id;
+						$value =  \Drupal::database()->query("SELECT count(nid) FROM {node_field_data} node INNER JOIN {node__field_status} status ON node.nid=status.entity_id WHERE node.type='innovation' and node.status=1 and node.uid=$uid and (status.field_status_value IN  ('6'))")->fetchField();
+						$sum = $sum + $value;
+					}
+       				$vars['output'] = $sum;
+      		}
+
+
+		}
+	}
+}
+function register_form_validate(&$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+	//print_r($form['account']['main_profiles']);die;
+	  //$form['main_profiles'][0]['entity']['field_company'][0]['value'] = 'My new value';
+	 // print_r($form_state->getValues());die;
+	$mail = $form_state->getValues()['mail'];
+	$_SESSION['new_user_mail'] = $mail;
+	$_SESSION['profile_type'] = $form_state->getValues()['main_profiles'][0]['entity']['field_user_profile_type'][0]['value'];
+	$_SESSION['company_contact'] = $form_state->getValues()['main_profiles'][0]['entity']['field_company_contact'][0]['value'];
+	$_SESSION['company'] = $form_state->getValues()['main_profiles'][0]['entity']['field_company'][0]['value'];
+}
+function forgetpassword_form_validate(&$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+    $name = $form_state->getValues()['name'];
+   $is_valid = \Drupal::service('email.validator')->isValid($name);
+   if(!$is_valid) 
+    $name =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.name='$name'")->fetchField();
+     $uid = \Drupal::database()->query("SELECT uid FROM {users_field_data} node  WHERE mail = '$name'")->fetchField();
+    $user = \Drupal\user\Entity\User::load($uid);
+     $user->activate();
+    $user->save();
+}
+function userlogin_form_validate(&$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+   $warnings = \Drupal::messenger()->messagesByType('warning');
+   if(!empty($warnings)) {
+    $security_warning = HTML::escape($warnings[0]);
+   //$security_warning = $warnings[0]->__toString();
+   \Drupal::messenger()->deleteByType('warning');
+   \Drupal::messenger()->addWarning($security_warning, TRUE);
+   }
+}
+function mainprofile_form_validate(&$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+	$url = \Drupal::request()->getRequestUri();
+		$path = explode('/',$url);
+		if($path[1] == 'user' && $path[3] == 'main') {
+			$uid = $path[2];
+		}
+	$mail_contact = $form_state->getValues()['field_company_contact'][0]['value'];
+	//print $_SESSION['profile_contact_mail'];
+	//print $mail_contact;
+	$_SESSION['company'] = $form_state->getValues()['field_company'][0]['value'];
+	$_SESSION['profile_changed_contact_mail'] = $mail_contact;
+	if($_SESSION['profile_contact_mail'] != $mail_contact) {
+		$_SESSION['is_profile_contact_mail_changed'] = true;
+		$_SESSION['profile_changed_contactmail'] = $mail_contact;
+	}
+	else {
+		$_SESSION['is_profile_contact_mail_changed'] = false;
+	}
+	$domain = substr($mail_contact, strrpos($mail_contact, '@') + 1); 
+	$philips_domain = false;
+	 if ($domain == 'philips.com') {
+	 	$philips_domain = true;
+	 }
+	$roles_condition = false;
+	$roles = $_SESSION['profile_main_user_roles'];
+	if(in_array('philips_supplier', $roles) || in_array('philips_preferred_supplier', $roles) || in_array('philips_user', $roles)) {
+		$roles_condition = true;
+	}
+	$_SESSION['is_inform_supplier'] = false;
+	if($philips_domain && $roles_condition && $_SESSION['is_profile_contact_mail_changed']) {
+		$user = \Drupal\user\Entity\User::load($uid);
+		$user->addRole('potential_supplier');
+		$user->save();
+		$_SESSION['is_inform_supplier'] = true;
+	}
+	
+	
+}
+
+function spice_utility_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+       //print $form_id;
+       if($form_id == 'user_pass') {
+           $form['#validate'][] = 'forgetpassword_form_validate';
+       }
+        if($form_id == "user_login_form") {
+    $form['#validate'][] = 'userlogin_form_validate';
+  }
+        if($form_id == "user_form") {
+    $url = \Drupal::request()->getRequestUri();
+    $path = explode('/',$url);
+    if($path[1] == 'user' && $path[3] == 'edit') {
+      if (isset($form['#entity_type']) && $form['#entity_type'] == 'user') {
+      foreach (array_keys($form['actions']) as $action) {
+        if ($action != 'preview' && isset($form['actions'][$action]['#type']) && $form['actions'][$action]['#type'] === 'submit') {
+        $form['actions'][$action]['#submit'][] = 'spice_utility_user_form_submit';
+        }
+      }
+    }
+    }
+  }
+	if($form_id == "profile_main_add_form") {
+		$url = \Drupal::request()->getRequestUri();
+		$path = explode('/',$url);
+		if($path[1] == 'user' && $path[3] == 'main') {
+			$uid = $path[2];
+		}
+			$roles_condition = false;
+			$userRoles  = \Drupal::database()->query('SELECT roles_target_id FROM {user__roles} u WHERE entity_id = :entity_id', ['entity_id' => $uid])->fetchAll();
+			$user_role_array = [];
+			foreach($userRoles as $key=>$value) {
+				$user_role_array[] = $value->roles_target_id;
+			}
+			$_SESSION['profile_main_userroles'] = $user_role_array;
+	}
+	if($form_id == 'profile_main_edit_form') {
+		$url = \Drupal::request()->getRequestUri();
+		$path = explode('/',$url);
+		if($path[1] == 'user' && $path[3] == 'main') {
+			$uid = $path[2];
+		}
+			$roles_condition = false;
+			$userRoles  = \Drupal::database()->query('SELECT roles_target_id FROM {user__roles} u WHERE entity_id = :entity_id', ['entity_id' => $uid])->fetchAll();
+			$user_role_array = [];
+			foreach($userRoles as $key=>$value) {
+				$user_role_array[] = $value->roles_target_id;
+			}
+			$_SESSION['profile_main_user_roles'] = $user_role_array;
+
+		  $profile_id  = \Drupal::database()->query('SELECT profile_id FROM {profile} u WHERE uid = :uid', ['uid' => $uid])->fetchField();
+		 $company_contact  = \Drupal::database()->query('SELECT field_company_contact_value FROM {profile__field_company_contact} u WHERE entity_id = :entity_id', ['entity_id' => $profile_id])->fetchField();
+		 $_SESSION['profile_contact_mail'] = $company_contact;
+		 $form['#validate'][] = 'mainprofile_form_validate';
+		//print $profile_id;die;
+	}
+	if ($form_id === 'user_register_form') {
+
+		/*$form['#suffix'] = '<div class="modal fade" id="myModal" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-body text-center">You did not indicate any Philips contact email, which means you are not yet a Supplier to Philips. If it is correct, click OK. Else, click on Cancel and indicate the email address of your current Philips Procurement contact person</div><div class="text-center"><button id="close_register" class="btn">Cancel</button><button id="ok_register" class="btn" name="remove_levels">Ok</button></div></div></div></div>';*/
+    $form['account']['name']['#title'] = t('Username (First_LastName)');
+    $form['account']['name']['#weight'] = 8;
+    $form['account']['name']['#description'] = t('Preferably use format : First_LastName. Spaces are allowed; punctuation is not allowed except for periods, hyphens, apostrophes, and underscores.');
+    $form['account']['mail']['#weight'] = 9;
+    unset($form['account']['contact']);
+    $form['#attributes']['onsubmit'] = 'return submit_registrationform();';
+    $form['#validate'][] = 'register_form_validate';
+	}
+       if($form_id == "node_scouting_lead_form") {
+        if(!empty($_GET['id'])) {
+          $node_details = Node::load($_GET['id']);
+          $form['field_search_space']['widget'][0]['target_id']['#attributes']['disabled'] = TRUE;
+         $form['field_search_space']['widget'][0]['target_id']['#default_value'] = $node_details;
+       }
+      } 
+	if($form_id == "node_innovation_follow_up_form") {
+		if(!empty($_GET['id'])) {
+		$node_details = Node::load($_GET['id']);
+		$form['field_idea']['widget'][0]['target_id']['#attributes']['disabled'] = TRUE;
+    	$form['field_idea']['widget'][0]['target_id']['#default_value'] = $node_details;
+    	}
+	}
+	if($form_id == "node_innovation_form") {
+		$uid = \Drupal::currentUser()->id();
+                $company =  \Drupal::database()->query("SELECT field_company_value FROM {profile__field_company} profile  WHERE entity_id = $uid and bundle='main'")->fetchField();
+                $form['field_company']['widget'][0]['value']['#default_value'] = $company;
+		if(!empty($_GET['id'])) {
+		$node_details = Node::load($_GET['id']);
+		//$form['field_search_space']['widget'][0]['target_id']['#attributes']['disabled'] = TRUE;
+    	//$form['field_search_space']['widget'][0]['target_id']['#default_value'] = $node_details;
+                $form['field_search_space']['widget']['#attributes']['disabled'] = TRUE;
+                $form['field_search_space']['widget']['#default_value'][0] = $_GET['id'];
+    	}
+    	if (isset($form['#entity_type']) && $form['#entity_type'] == 'node') {
+    foreach (array_keys($form['actions']) as $action) {
+      if ($action != 'preview' && isset($form['actions'][$action]['#type']) && $form['actions'][$action]['#type'] === 'submit') {
+        $form['actions'][$action]['#submit'][] = 'spice_utility_node_form_submit';
+      }
+    }
+  }
+	}
+	if($form_id == "node_close_submission_form") {
+		if(!empty($_GET['id'])) {
+		$node_details = Node::load($_GET['id']);
+		$form['field_idea']['widget'][0]['target_id']['#attributes']['disabled'] = TRUE;
+    	$form['field_idea']['widget'][0]['target_id']['#default_value'] = $node_details;
+    	}
+	}
+if($form_id == "comment_comment_node_innovation_form") {
+	
+	$current_path = \Drupal::service('path.current')->getPath();
+    	$url = \Drupal::request()->getRequestUri();
+    	$str = explode('/',$url);
+    	$form['actions']['submit']['#submit'][]  = 'comment_submit_handler';
+	if($str[1]=="comment" && $str[2] == 'reply') {
+		$status =  $_GET['status'];
+		if($status == "publishpark")
+	 $form['comment_body']['widget'][0]['#default_value']="Thank you for contacting us regarding your innovation.
+	
+We appreciate receiving invention offers.
+After careful consideration, we have decided not to follow up on your offer.
+
+We thank you for sharing your opportunity with Philips and we wish you well in your endeavours.
+
+Sincerely ";
+    if($status == "block")
+	 $form['comment_body']['widget'][0]['#default_value']="Thank you for contacting us regarding your innovation.
+We appreciate receiving invention offers. Unfortunately, sometimes they do not fit within the current Philips portfolio.
+After careful consideration, we have decided not to follow up on your offer.
+
+We thank you for sharing your opportunity with Philips and we wish you well in your endeavours.
+
+Sincerely ";
+
+}
+}
+}
+
+function spice_utility_user_form_submit(&$form, FormStateInterface $form_state) {
+$response = new RedirectResponse("/");
+$response->send();
+}
+
+function spice_utility_node_form_submit(&$form, FormStateInterface $form_state) {
+	$response = new RedirectResponse("/thanks");
+	$response->send();
+}
+
+function comment_submit_handler(&$form, FormStateInterface $form_state){
+  //print "test";die;
+  $values = $form_state->getValues();
+  $_SESSION['comment_array'] = $values;
+  $tomails = $values['field_email_comment_to'];
+  $params['subject'] = 'new way';
+  $params['message'] = 'My name is ';
+   $mailManager = \Drupal::service('plugin.manager.mail');
+   foreach($tomails as $key=>$value) {
+  	$mailManager->mail('spice_utility', 'contractor_request_', $value['value'], 'en', $params, 'tt@gmail.com', true);
+	}
+}
+
+function spice_utility_node_view(array &$build, \Drupal\Core\Entity\EntityInterface $entity, \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display, $view_mode) {
+	switch ($entity->bundle()) {
+  	case 'innovation_search_space':
+          $build['#cache']['max-age'] = 0;
+         \Drupal::service('page_cache_kill_switch')->trigger();
+         $closing_date = strtotime($entity->get('field_search_closing_date')->getValue()[0]['value']);
+         $present_time = strtotime(date("Y-m-d"));
+         if($closing_date < $present_time)
+  	    \Drupal::messenger()->addMessage(t('This Innovation challenge is now closed! Please select another innovation challenge to post your idea else it might not be properly evaluated.'),'warning',true);
+  	//	\Drupal::messenger()->addMessage(t('Warning message.'),'warning',true);
+  	break;
+  }
+   //$build['body'][0]['#text'] = 'this is a new altered content body ';
+}
+
