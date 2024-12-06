@@ -417,7 +417,6 @@ function spice_utility_entity_presave(Drupal\Core\Entity\EntityInterface $entity
   	 	$entity->set('field_company_contact',$current_user_mail);
   	 break;
   	 case 'innovation':
-
   	 if(!$entity->isNew()) {
   	 	$innov_node_status_query = $entity->field_status->value;
   	 	if($innov_node_status_query == 1)
@@ -438,15 +437,15 @@ function spice_utility_entity_presave(Drupal\Core\Entity\EntityInterface $entity
 				if($innov_node_status == "3-Assessment" || $innov_node_status == "4-Not Matching" || $innov_node_status == "5-Parked" || $innov_node_status == "6-Hand Over" || $innov_node_status == "7-Adoption") {
 					$entity->set('field_date_decision',date('Y-m-d', time()));
 				}
-        $challenge_nid_original = $entity->original->field_search_space->target_id;
-        $challenge_nid = $entity->field_search_space->target_id;
-        if(!empty($challenge_nid) && ($challenge_nid_original != $challenge_nid))
-          $contact_uid =  \Drupal::database()->query("SELECT field_contact_person_target_id FROM {node__field_contact_person} node  WHERE node.entity_id=$challenge_nid")->fetchField();
-        $entity->set('field_philips_owner',$contact_uid);
-        
+                                $challenge_nid_original = $entity->original->field_search_space->target_id;
+                                 $challenge_nid = $entity->field_search_space->target_id;
+                                if(!empty($challenge_nid) && ($challenge_nid_original != $challenge_nid))
+                                  $contact_uid =  \Drupal::database()->query("SELECT field_contact_person_target_id FROM {node__field_contact_person} node  WHERE node.entity_id=$challenge_nid")->fetchField();
+                                  $entity->set('field_philips_owner',$contact_uid);
+
   	 }
   	 //$challenge_nid = $entity->field_search_space->target_id;
-     if($entity->isNew()) {
+        if($entity->isNew()) {
        $challenge_nid = $entity->field_search_space->target_id;
        //print $challenge_nid;
         if(!empty($challenge_nid))
@@ -462,7 +461,7 @@ function spice_utility_entity_presave(Drupal\Core\Entity\EntityInterface $entity
       $company_profile =  \Drupal::database()->query("SELECT field_company_profile_target_id FROM {profile__field_company_profile} pfcc  WHERE pfcc.entity_id=$profile_id")->fetchField();
       $entity->set('field_company_profile',$company_profile);
     }
-     }
+   }
   	   //print "test1";die;
   	   /*if($entity->isNew()) {
          if(!empty($challenge_nid)) {
@@ -759,6 +758,7 @@ $comment_body."<br>".
 
 	if($message['subject'] == 'innovation_new_field_search_space_admin_comm_mgr') {
                $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator','community_mgr')")->fetchAll();
+$mail_id = '';
 foreach($uids as $k=>$u) {
 $mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
 }
@@ -809,7 +809,7 @@ $innov_author_mail. " " ."has posted an answer to your innovation challenge". " 
 "Details on:"."<a href=".$host.'/node/'.$innov_nid.'>'.$innov_node_title.'</a>  <br><br>'.
 "Innovation: "."<b>".$innov_node_title."</b><br>".
 "Description: ".$innov_node_body."<br>".
-"Thanks for verifying and if necessary publishing this submission in order to star the assessment and feedback process! "."<br>".
+"Thanks for verifying and if necessary publishing this submission in order to start the assessment and feedback process! "."<br>".
 "Sincerely,"."<br>".
 "The Philips Supplier Innovation team.";
 			}
@@ -826,6 +826,7 @@ $innov_author_mail. " " ."has posted an answer to your innovation challenge". " 
 
 	if($message['subject'] == 'registered_suppliers_philips_mail') {
                 $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator','community_mgr')")->fetchAll();
+$mail_id = '';
 foreach($uids as $k=>$u) {
 $mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
 }
@@ -970,6 +971,7 @@ $mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node
 
 	if($message['subject'] == 'registered_suppliers_no_philips_mail') {
                  $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator','community_mgr')")->fetchAll();
+$mail_id = '';
 foreach($uids as $k=>$u) {
 $mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
 }
@@ -1025,6 +1027,7 @@ $mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node
 
 	if($message['subject'] == 'registered_individual_inventor') {
                 $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator')")->fetchAll();
+$mail_id = '';
 foreach($uids as $k=>$u) {
 $mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
 }
@@ -1073,6 +1076,7 @@ $mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node
 
 	if($message['subject'] == 'new_profile_save') {
                $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator')")->fetchAll();
+$mail_id = '';
 foreach($uids as $k=>$u) {
 $mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
 }
@@ -1433,7 +1437,7 @@ else {
 
 
 	if($message['subject'] == 'innovation_new_field_search_space') {
-		$roles_condition = false;
+			$roles_condition = false;
 					$roles = \Drupal::currentUser()->getRoles();
 					if(in_array('inventor', $roles) || in_array('philips_supplier', $roles) || in_array('philips_preferred_supplier', $roles) || in_array('philips_user', $roles) || in_array('challenge_owner', $roles) || in_array('community_support', $roles) || in_array('innovation_champion', $roles) || in_array('community_mgr', $roles) || in_array('administrator', $roles)) {
   					// Do something if user has role editor
@@ -1508,6 +1512,29 @@ $innov_author_mail. " " ."has posted an answer to your innovation challenge". " 
 		$cid = (int)$message['body'][0];
 		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
 		$comment_payload = $comment->toArray();
+		//$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+		//$cid_uid = $comment_payload['uid'][0]['target_id'];
+		//$cid_user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$cid_uid")->fetchField();
+		//$cid_user_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$cid_uid")->fetchField();
+		//$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+		//$uid = $comment_payload['uid'][0]['target_id'];
+		//$user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		//$user_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		//$message['to'] = $user_mail;
+		//$message['subject'] = "New comment has been posted to". " " .$node_title;
+		//$host = \Drupal::request()->getSchemeAndHttpHost();
+		//$comment_body = $comment_payload['comment_body'][0]['value'];
+		$is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
+		if(!$is_private_comment) {
+			//don't send mail
+			$message['to'] = '';
+			$message['send'] = FALSE;
+			return;
+		}
+		else {
+                       $cid = (int)$message['body'][0];
+		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+		$comment_payload = $comment->toArray();
 		$comment_nid = $comment_payload['entity_id'][0]['target_id'];
 		$cid_uid = $comment_payload['uid'][0]['target_id'];
 		$cid_user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$cid_uid")->fetchField();
@@ -1521,13 +1548,6 @@ $innov_author_mail. " " ."has posted an answer to your innovation challenge". " 
 		$host = \Drupal::request()->getSchemeAndHttpHost();
 		$comment_body = $comment_payload['comment_body'][0]['value'];
 		$is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
-		if(!$is_private_comment) {
-			//don't send mail
-			$message['to'] = '';
-			$message['send'] = FALSE;
-			return;
-		}
-		else {
 			$message['subject'] = "New comment has been posted to". " " .$node_title;
 		$message['body'] = [];
 		$message['body'][] = "Dear Admin/Community Mgr,
@@ -1540,10 +1560,12 @@ $comment_body;
 	}
 	if($message['subject'] == 'field_search_space') {
 		$cid = (int)$message['body'][0];
+               if(!empty($cid)) {
 		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
 		$comment_payload = $comment->toArray();
 		$comment_nid = $comment_payload['entity_id'][0]['target_id'];
 		$challenge_nid =  \Drupal::database()->query("SELECT field_search_space_target_id FROM {node__field_search_space} node  WHERE node.entity_id=$comment_nid")->fetchField();
+                }
 		//print $challenge_nid;die;
 		if(!empty($challenge_nid)) {
 			$is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
@@ -1561,6 +1583,7 @@ $comment_body;
 				$contact_person_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$contact_uid")->fetchField();
 				$author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$author_uid")->fetchField();
 				$cid = (int)$message['body'][0];
+                                if(!empty($cid)) {
 				$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
 				$comment_payload = $comment->toArray();
 				$comment_nid = $comment_payload['entity_id'][0]['target_id'];
@@ -1568,6 +1591,7 @@ $comment_body;
 				$cid_uid = $comment_payload['uid'][0]['target_id'];
 		$cid_user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$cid_uid")->fetchField();
 		$cid_user_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$cid_uid")->fetchField();
+                               }
 				$message['to'] = $contact_person_mail.','.$author_mail;
 				$message['subject'] = "New comment has been posted to". " " .$node_title;
 				$host = \Drupal::request()->getSchemeAndHttpHost();
@@ -1598,6 +1622,27 @@ $comment_body;
 	}
 	if($message['subject'] == 'comment_private_author') {
 		$cid = (int)$message['body'][0];
+                if(!empty($cid)) {
+		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+		$comment_payload = $comment->toArray();
+                }
+		//$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+		//$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+		//$uid = $comment_payload['uid'][0]['target_id'];
+		//$user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		//$user_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		
+		//$host = \Drupal::request()->getSchemeAndHttpHost();
+		//$comment_body = $comment_payload['comment_body'][0]['value'];
+		$is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
+		if(!$is_private_comment) {
+			//print "test";die;
+			$message['send'] = FALSE;
+			return;
+		}
+		else {
+                $cid = (int)$message['body'][0];
+               if(!empty($cid)) {
 		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
 		$comment_payload = $comment->toArray();
 		$comment_nid = $comment_payload['entity_id'][0]['target_id'];
@@ -1609,12 +1654,7 @@ $comment_body;
 		$host = \Drupal::request()->getSchemeAndHttpHost();
 		$comment_body = $comment_payload['comment_body'][0]['value'];
 		$is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
-		if(!$is_private_comment) {
-			//print "test";die;
-			$message['send'] = FALSE;
-			return;
-		}
-		else {
+               }
 		$message['to'] = $user_mail;
 		$message['subject'] = "New private comment has been posted to". " " .$node_title;
 		$message['body'] = [];
@@ -1635,18 +1675,64 @@ if($message['subject'] == "comment_private_send_role_based-") {
  $message['send'] = FALSE;
 return;
 }
+if($message['subject'] == "comment_public_mgrs") {
+  $cid = (int)$message['body'][0];
+//print_r($cid);die;
+                if(!empty($cid)) {
+    $comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+    $comment_payload = $comment->toArray();
+                 }
+                 $is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
+
+    if($is_private_comment) {
+      //print "test";die;
+      $message['send'] = FALSE;
+      return;
+    }
+    else {
+      if(!empty($comment_payload)) {
+                $comment_nid = $comment_payload['entity_id'][0]['target_id'];
+                 $host = \Drupal::request()->getSchemeAndHttpHost();
+                $comment_body = $comment_payload['comment_body'][0]['value'];
+                $is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
+              }
+$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+       $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator','community_mgr')")->fetchAll();
+
+foreach($uids as $key=>$u) {
+$k .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
+}
+$message['to'] = $k;
+$message['subject'] = "New public comment has been posted to". " " .$node_title;
+
+    $message['body'] = [];
+    $message['body'][] = "Dear Users,
+
+<a href=".$host.'/node/'.$comment_nid.'>'.$node_title.'</a> got new comment from <a href='.$host.'/user/'.$uid.'>'.$user_name.'</a>.
+
+<br>
+
+<strong>Comment:</strong>'."<br>".
+$comment_body;
+}
+
+    
+}
 if($message['subject'] == "comment_public-") {
 		$cid = (int)$message['body'][0];
 //print_r($cid);die;
+                if(!empty($cid)) {
 		$comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
 		$comment_payload = $comment->toArray();
-		$comment_nid = $comment_payload['entity_id'][0]['target_id'];
-		$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
-		$uid = $comment_payload['uid'][0]['target_id'];
-		$user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
-		
-		$host = \Drupal::request()->getSchemeAndHttpHost();
-		$comment_body = $comment_payload['comment_body'][0]['value'];
+                 }
+		//$comment_nid = $comment_payload['entity_id'][0]['target_id'];
+		//$node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+		//$uid = $comment_payload['uid'][0]['target_id'];
+		//$user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+		//$innov_author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+//$innov_author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$innov_author_uid")->fetchField();
+		//$host = \Drupal::request()->getSchemeAndHttpHost();
+		//$comment_body = $comment_payload['comment_body'][0]['value'];
 		$is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
 
 		if($is_private_comment) {
@@ -1655,6 +1741,25 @@ if($message['subject'] == "comment_public-") {
 			return;
 		}
 		else {
+                 //$cid = (int)$message['body'][0];
+                   //      $comment = \Drupal::entityTypeManager()->getStorage('comment')->load($cid);
+                //$comment_payload = $comment->toArray();
+                if(!empty($comment_payload)) {
+                $comment_nid = $comment_payload['entity_id'][0]['target_id'];
+                    $challenge_nid =  \Drupal::database()->query("SELECT field_search_space_target_id FROM {node__field_search_space} node  WHERE node.entity_id=$comment_nid")->fetchField();
+                      $contact_uid =  \Drupal::database()->query("SELECT field_contact_person_target_id FROM {node__field_contact_person} node  WHERE node.entity_id=$challenge_nid")->fetchField();
+                      if(!empty($contact_uid))
+        $contact_person_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$contact_uid")->fetchField();
+
+                $node_title =  \Drupal::database()->query("SELECT title FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+                $uid = $comment_payload['uid'][0]['target_id'];
+                $user_name =  \Drupal::database()->query("SELECT name FROM {users_field_data} user  WHERE user.uid=$uid")->fetchField();
+                $innov_author_uid =  \Drupal::database()->query("SELECT uid FROM {node_field_data} node  WHERE node.nid=$comment_nid")->fetchField();
+$innov_author_mail =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$innov_author_uid")->fetchField();
+                $host = \Drupal::request()->getSchemeAndHttpHost();
+                $comment_body = $comment_payload['comment_body'][0]['value'];
+                $is_private_comment = (int)$comment_payload['field_private_comment'][0]['value'];
+                   }
 			$message['subject'] = "New public comment has been posted to". " " .$node_title;
                 $connection = \Drupal::service('database');
     $sid  = \Drupal::database()->query('SELECT sid FROM {subscriptions} u WHERE module =:module and field = :field and value = :nid and recipient_uid = :recipient_uid ', ['module' => 'node','field' => 'nid','nid' => $comment_nid,'recipient_uid' => $uid])->fetchField();
@@ -1679,16 +1784,19 @@ if($message['subject'] == "comment_public-") {
 				$uids[] = $value->recipient_uid;
 				$to_mails[] =  \Drupal::database()->query("SELECT mail FROM {users_field_data} user  WHERE user.uid=$value->recipient_uid")->fetchField();
 			}
+  $k = $innov_author_mail.",".$contact_person_mail.",";
 			if(!empty($to_mails))
 			$to_mails = array_unique($to_mails);
 		foreach($to_mails as $key=>$value) {
 			$k .= $value.",";
 		}
+   
+
 		//print_r($k);die;
 		$message['to'] = $k;
 
 		$message['body'] = [];
-		$message['body'][] = "Dear Admin/Community Mgr,
+		$message['body'][] = "Dear Users,
 
 <a href=".$host.'/node/'.$comment_nid.'>'.$node_title.'</a> got new comment from <a href='.$host.'/user/'.$uid.'>'.$user_name.'</a>.
 
@@ -1700,7 +1808,9 @@ $comment_body;
 		//print_r($comment);die;
 	}
 	if($message['subject'] == "comment_private_send_role_based-Private") {
-                $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('community_mgr')")->fetchAll();
+               $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('community_mgr')")->fetchAll();
+
+$mail_id = '';
 foreach($uids as $k=>$u) {
 $mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
 }
@@ -1745,6 +1855,8 @@ $comment_body;
 
 	if($message['subject'] == "registered") {
                 $uids =  \Drupal::database()->query("SELECT entity_id FROM {user__roles} user  WHERE user.roles_target_id IN ('administrator')")->fetchAll();
+
+$mail_id = '';
 foreach($uids as $k=>$u) {
 $mail_id .= \Drupal::database()->query("SELECT mail FROM {users_field_data} node  WHERE uid = $u->entity_id")->fetchField().",";
 }
@@ -2123,7 +2235,9 @@ function mainprofile_form_validate(&$form, \Drupal\Core\Form\FormStateInterface 
 }
 
 function spice_utility_form_alter(&$form, FormStateInterface $form_state, $form_id) {
-       //print $form_id;
+         if ($form_id == 'user_login_form') {
+           //$form['#attributes']['class'][] = 'hidden';
+       }
        if($form_id == 'user_pass') {
            $form['#validate'][] = 'forgetpassword_form_validate';
        }
